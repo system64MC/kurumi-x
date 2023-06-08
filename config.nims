@@ -1,0 +1,5 @@
+--d:release
+--backend:cpp
+--verbosity:1
+--threads:off
+--d:nimDontSetUtf8CodePage

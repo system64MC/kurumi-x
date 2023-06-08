@@ -1,0 +1,64 @@
+import module
+import ../globals
+import ../utils/utils
+
+type
+    FmProModule* = ref object of SynthModule
+        matrix*: array[6, array[6, bool]] = [
+            [true , false, false, false, false, false],
+            [false, true , false, false, false, false],
+            [false, false, true , false, false, false],
+            [false, false, false, true , false, false],
+            [false, false, false, false, true , false],
+            [false, false, false, false, false, true ],
+        ]
+        samples*: array[6, float64] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+proc constructFmProModule*(): FmProModule =
+    var module = new FmProModule
+    module.inputs = @[
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+    ]
+    module.outputs = @[
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        Link(moduleIndex: -1, pinIndex: -1),
+        ]
+    return module
+
+method synthesize(module: FmProModule, x: float64, pin: int): float64 =
+
+    for operator in 0..<6:
+        var sum = 0.0
+        for modulator in 0..<6:
+            if module.matrix[operator][modulator]:
+                sum += module.samples[modulator]
+        let modModule = if(module.inputs[operator].moduleIndex > -1): synthContext.moduleList[module.inputs[operator].moduleIndex] else: nil
+        module.samples[operator] = if(modModule == nil): 0 else: modModule.synthesize(x + sum * 6, module.inputs[operator].pinIndex)
+
+    # for operator in 0..<6:
+    #     var sum = 0.0
+    #     for modulator in 0..<6:
+    #         if module.matrix[operator][modulator]:
+    #             sum += samples[modulator]
+    #     let modModule = if(module.inputs[operator].moduleIndex > -1): synthContext.moduleList[module.inputs[operator].moduleIndex] else: nil
+    #     samples[operator] = if(modModule == nil): 0 else: modModule.synthesize(x + sum * 6, pin)
+    
+    return module.samples[pin]
+    # let modulation = if(moduleA == nil): 0.0 else: moduleA.synthesize(x)
+
+    # return moduleB.synthesize(x + modulation)
+
+import ../serializationObject
+import flatty
+
+method serialize*(module: FmProModule): ModuleSerializationObject =
+    return ModuleSerializationObject(mType: ModuleType.FM_PRO, data: toFlatty(module))
