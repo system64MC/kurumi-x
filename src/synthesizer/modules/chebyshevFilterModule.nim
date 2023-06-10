@@ -25,6 +25,9 @@ type
         note*: int32 = 0
         filter: ChebyshevFilter
         buffer: array[4096 * 8, float64]
+        normalize*: bool = false
+        min: float64 = 0
+        max: float64 = 0
 
     FilterTypes = enum
         LOWPASS,
@@ -97,7 +100,7 @@ proc processChebyshevFilter*(module: ChebyshevFilterModule, x: float64): float64
             x = module.filter.A[i]*(module.filter.w0[i] - 2.0 * module.filter.w1[i] + module.filter.w2[i])
             module.filter.w2[i] = module.filter.w1[i]
             module.filter.w1[i] = module.filter.w0[i]
-    return x * module.filter.ep
+    return x
 
 method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
@@ -110,6 +113,8 @@ method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64
         var filterCutoff = 5 * pow(10, mCutoff * 3)
         filterCutoff = min(sampleRate/2, filterCutoff)
         module.setChebyshevFilter(filterCutoff, mResonance)
+        module.min = 0
+        module.max = 0
         if(moduleA == nil):
             for i in 0..<module.buffer.len:
                 module.buffer[i] = 0
@@ -124,12 +129,22 @@ method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64
             for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
                     let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
-                    module.buffer[i] = module.processChebyshevFilter(val)
+                    let res = module.processChebyshevFilter(val)
+                    module.buffer[i] = res
+                    module.max = max(module.max, res)
+                    module.min = min(module.min, res)
+
         module.update = false
 
     if(moduleA == nil): return 0.0
     let delta = 1.0 / LENGTH
-    return module.buffer[math.floor(moduloFix(x / (2 * PI), 1)/delta).int] 
+    let output = module.buffer[math.floor(moduloFix(x / (2 * PI), 1)/delta).int] 
+    if(module.normalize):
+        let norm = max(abs(module.max), abs(module.min))
+        if norm == 0: return output
+        return output * (1 / norm)
+
+    return output
 
 import ../serializationObject
 import flatty

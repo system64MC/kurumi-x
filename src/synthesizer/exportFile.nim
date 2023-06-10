@@ -13,6 +13,7 @@ import parseutils
 import streams
 import os
 import math
+import browsers
 
 proc getSampleRate(): int =
     return int(floor((440 * float64(synthContext.waveDims.x)) / 2.0))
@@ -259,3 +260,9 @@ proc saveFUW*(): void =
         discard f.writeBytes(@[((smp shr 25)).byte], 0, 1)
 
     notifyPopup("Kurumi-X", "FUW file " & path.splitFile().name & " exported!", IconType.Info)
+
+proc saveDMW*(): void =
+    openDefaultBrowser("https://tildearrow.org/?p=post&month=5&year=2021&item=delek")
+    openDefaultBrowser("https://tildearrow.org/?p=post&month=7&year=2022&item=deflebrain")
+    openDefaultBrowser("https://github.com/tildearrow/furnace")
+    return

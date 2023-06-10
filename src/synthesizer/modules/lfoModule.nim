@@ -45,7 +45,8 @@ method getLfoValue(module: LfoModule, x: float64, pin: int): float64 {.base.} =
         of CUSTOM:
             if(module.inputs[1].moduleIndex > -1):
                 let moduleB = synthContext.moduleList[module.inputs[1].moduleIndex]
-                res = if(moduleB == nil): 0 else: moduleB.synthesize(moduloFix((synthContext.macroFrame.float64/synthContext.macroLen.float64) * module.frequency.float64, 1.0), module.inputs[1].pinIndex)
+                let val = (synthContext.macroFrame.float64 * PI * 2) / synthContext.macroLen.float64
+                res = if(moduleB == nil): 0 else: moduleB.synthesize(moduloFix(val * module.frequency.float64, 2 * PI), module.inputs[1].pinIndex)
 
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]

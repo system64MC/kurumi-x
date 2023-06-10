@@ -388,15 +388,28 @@ method draw(module: SquareOscillatorModule, index: int): void {.inline.} =
     drawInputs(module, index)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
-    if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
-        synthesize()
-    if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
-        synthesize()
-    if(igSliderFloat("P. Width", module.duty.addr, 0f, 1f)):
-        synthesize()
-    if(igSliderInt("Detune", module.detune.addr, -32, 32)):
-        synthesize()
+
+
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index)
+        if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
+            synthesize()
+        if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
+            synthesize()
+        if(igSliderFloat("P. Width", module.dutyEnvelope.peak.addr, 0f, 1f)):
+            synthesize()
+        if(igSliderInt("Detune", module.detune.addr, -32, 32)):
+            synthesize()
+        if(igCheckbox("Use ADSR", module.useAdsr.addr)):
+            synthesize()
+        igEndTabItem()
+    if(module.useAdsr):
+        if(igBeginTabItem("ADSR")):
+            module.dutyEnvelope.addr.drawEnvelope(1)
+            igEndTabItem()
+    igEndTabBar()
+    
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
     drawOutputs(module, index)
@@ -810,9 +823,21 @@ method draw(module: DownsamplerModule, index: int): void {.inline.} =
     drawInputs(module, index)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
-    if(igSliderFloat("Downsample", module.downsample.addr, 0.0f, 1.0f)):
-        synthesize()
+
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index)
+        if(igSliderFloat("Downsample", module.downsampleEnvelope.peak.addr, 0.0f, 1.0f)):
+            synthesize()
+        if(igCheckbox("Use ADSR", module.useAdsr.addr)):
+            synthesize()
+        igEndTabItem()
+    if(module.useAdsr):
+        if(igBeginTabItem("ADSR")):
+            module.downsampleEnvelope.addr.drawEnvelope(1)
+            igEndTabItem()
+    igEndTabBar()
+    
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
     drawOutputs(module, index)
@@ -828,9 +853,21 @@ method draw(module: QuantizerModule, index: int): void {.inline.} =
     drawInputs(module, index)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
-    if(igSliderFloat("Quant.", module.quatization.addr, 0.0f, 1.0f)):
-        synthesize()
+
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index)
+        if(igSliderFloat("Quant.", module.quantizationEnvelope.peak.addr, 0.0f, 1.0f)):
+            synthesize()
+        if(igCheckbox("Use ADSR", module.useAdsr.addr)):
+            synthesize()
+        igEndTabItem()
+    if(module.useAdsr):
+        if(igBeginTabItem("ADSR")):
+            module.quantizationEnvelope.addr.drawEnvelope(1)
+            igEndTabItem()
+    igEndTabBar()
+
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
     drawOutputs(module, index)
@@ -981,6 +1018,8 @@ method draw(module: BqFilterModule, index: int): void {.inline.} =
             synthesize()
         if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
             synthesize()
+        if(igCheckbox("Normalize", module.normalize.addr)):
+            synthesize()
         igEndChild()
         igEndTabItem()
     if(module.useCutoffEnvelope):
@@ -1034,6 +1073,8 @@ method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
         if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
             synthesize()
         if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
+            synthesize()
+        if(igCheckbox("Normalize", module.normalize.addr)):
             synthesize()
         igEndChild()
         igEndTabItem()

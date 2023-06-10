@@ -42,6 +42,8 @@ proc drawApp*(w: GLFWWindow): void {.inline.} =
                     saveN163(true)
                 if(igMenuItem("Furnace Wave (FUW)")):
                     saveFUW()
+                if(igMenuItem("Deflemask Wave (DMW)")):
+                    saveDMW()
                 igEndMenu()
 
             igEndMenu()

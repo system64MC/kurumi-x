@@ -14,7 +14,8 @@ type
         detune*: int32 = 0
 
     SquareOscillatorModule* = ref object of SineOscillatorModule
-        duty*:float32 = 0.5
+        dutyEnvelope*: Adsr = Adsr(peak: 0.5)
+        useAdsr*: bool = false
 
     TriangleOscillatorModule* = ref object of SineOscillatorModule
 
@@ -63,7 +64,8 @@ proc constructSquareOscillatorModule*(): SquareOscillatorModule =
 method synthesize(module: SquareOscillatorModule, x: float64, pin: int): float64 =
     let myMult = module.getMult()
     let val = (x * myMult / (PI * 2)) + (module.phase + module.getPhase())
-    return if(moduloFix(val, 1) < (module.duty)): 1 else: -1
+    let duty = if(module.useAdsr): module.dutyEnvelope.doAdsr() else: module.dutyEnvelope.peak
+    return if(moduloFix(val, 1) < (duty)): 1 else: -1
 
 
 proc constructTriangleOscillatorModule*(): TriangleOscillatorModule =

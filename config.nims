@@ -3,3 +3,6 @@
 --verbosity:1
 --threads:off
 --d:nimDontSetUtf8CodePage
+--opt:speed
+--passC:"-flto"
+--passL:"-flto -s"

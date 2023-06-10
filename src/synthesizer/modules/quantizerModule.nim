@@ -5,7 +5,9 @@ import math
 
 type
     QuantizerModule* = ref object of SynthModule
+        quantizationEnvelope*: Adsr = Adsr(peak: 1.0)
         quatization*: float32 = 1.0
+        useAdsr*: bool = false
 
 proc constructQuantizerModule*(): QuantizerModule =
     var module = new QuantizerModule
@@ -22,7 +24,9 @@ method synthesize(module: QuantizerModule, x: float64, pin: int): float64 =
     if(moduleA == nil): 
         return 0.0
 
-    if(module.quatization >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex)
+    let quantization = if(module.useAdsr): module.quantizationEnvelope.doAdsr() else: module.quantizationEnvelope.peak
+
+    if(quantization >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex)
 
     var x1 = 0.0
     var res = 0.0
@@ -33,12 +37,12 @@ method synthesize(module: QuantizerModule, x: float64, pin: int): float64 =
     if(res < 0):
         while x1 > res:
             outp = x1
-            x1 -= 1 - module.quatization
+            x1 -= 1 - quantization
         return outp
 
     while x1 < res:
         outp = x1
-        x1 += 1 - module.quatization
+        x1 += 1 - quantization
     return outp
 
 import ../serializationObject

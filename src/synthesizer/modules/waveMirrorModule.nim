@@ -23,7 +23,7 @@ method synthesize*(module: WaveMirrorModule, x: float64, pin: int): float64 =
         let x2 = x * 2
         let x3 = -1 + x
         let a = 1 - module.mirrorPlace
-        if(x < PI): return moduleA.synthesize(moduloFix(x2, 2 * PI), pin) else: return moduleA.synthesize(moduloFix(-(-2 * PI + x2), 2 * PI), module.inputs[0].pinIndex)
+        if(x < PI): return moduleA.synthesize(moduloFix(x2, 2 * PI), module.inputs[0].pinIndex) else: return moduleA.synthesize(moduloFix(-(-2 * PI + x2), 2 * PI), module.inputs[0].pinIndex)
         # if(x < module.mirrorPlace): return moduleA.synthesize(moduloFix(x2, 1)) else: return moduleA.synthesize((module.mirrorPlace - 2 * x) mod 1)
 
 import ../serializationObject

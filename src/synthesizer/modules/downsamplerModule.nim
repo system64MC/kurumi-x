@@ -5,7 +5,8 @@ import math
 
 type
     DownsamplerModule* = ref object of SynthModule
-        downsample*: float32 = 1.0
+        downsampleEnvelope*: Adsr = Adsr(peak: 1.0)
+        useAdsr*: bool = false
 
 proc constructDownsamplerModule*(): DownsamplerModule =
     var module = new DownsamplerModule
@@ -21,11 +22,13 @@ method synthesize(module: DownsamplerModule, x: float64, pin: int): float64 =
     if(moduleA == nil): 
         return 0.0
 
-    if(module.downsample >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex)
+    let downsample = if(module.useAdsr): module.downsampleEnvelope.doAdsr() else: module.downsampleEnvelope.peak
+
+    if(downsample >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex)
 
     var x1 = 0.0
     var res = 0.0
-    let delta = (1 - module.downsample) * PI * 2
+    let delta = (1 - downsample) * PI * 2
 
     while x1 < x:
         res = moduleA.synthesize(x1, module.inputs[0].pinIndex)

@@ -84,6 +84,8 @@ proc unserializeModules(data: SynthSerializeObject) =
             synthContext.moduleList[i] = mData.data.fromFlatty(AverageModule)
         of BQ_FILTER:
             synthContext.moduleList[i] = mData.data.fromFlatty(BqFilterModule)
+        of CH_FILTER:
+            synthContext.moduleList[i] = mData.data.fromFlatty(ChebyshevFilterModule)
         of CHORD:
             synthContext.moduleList[i] = mData.data.fromFlatty(ChordModule)
         of CLIPPER:
