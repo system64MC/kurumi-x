@@ -161,7 +161,17 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             module = mData.data.fromFlatty(FastBqFilterModule)
         else:
             module = nil
-    return module        
+    return module       
+
+var moduleClipboard*: ModuleSerializationObject
+
+proc unserializeModules(data: SynthSerializeObject) =
+    for i in 0..<data.moduleList.len:
+        let mData = data.moduleList[i]
+        synthContext.moduleList[i] = mData.unserializeModule()
+
+proc unserializeFromClipboard*(): SynthModule =
+    return moduleClipboard.unserializeModule()
 
 proc loadState*() =
     try:
@@ -180,13 +190,3 @@ proc loadState*() =
     except IOError:
         echo "error"
         return
-
-var moduleClipboard*: ModuleSerializationObject
-
-proc unserializeModules(data: SynthSerializeObject) =
-    for i in 0..<data.moduleList.len:
-        let mData = data.moduleList[i]
-        synthContext.moduleList[i] = mData.unserializeModule()
-
-proc unserializeFromClipboard*(): SynthModule =
-    return moduleClipboard.unserializeModule()
