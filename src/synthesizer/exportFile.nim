@@ -7,6 +7,9 @@ import supersnappy
 import modules
 import serializationObject
 
+import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
+import nimgl/[opengl, glfw]
+
 import tinydialogs
 import parseutils
 
@@ -18,8 +21,33 @@ import browsers
 proc getSampleRate(): int =
     return int(floor((440 * float64(synthContext.waveDims.x)) / 2.0))
 
+proc drawPopup(currFrame, maxFrame: int): void {.inline.} =
+    igRender()
+    glfwPollEvents()
+
+
+    igOpenGL3NewFrame()
+    igGlfwNewFrame()
+    igNewFrame()
+    
+    if(igBeginPopupModal("Exporting sequence", nil, flags = ImGuiWindowFlags.NoResize)):
+        igText(("Exporting Wave " & $currFrame & " over " & $maxFrame & "...").cstring)
+        echo "Window drawn"
+        igEndPopup()
+    igRender()
+
+    glClearColor(0.45f, 0.55f, 0.60f, 1.00f)
+    glClear(GL_COLOR_BUFFER_BIT)
+
+    igOpenGL3RenderDrawData(igGetDrawData())
+
+    window.swapBuffers()
+    glfwSwapInterval(1)
+
 proc saveWav*(bits: int = 16, sequence: bool = false): void =
     let path = saveFileDialog("Export .WAV", getCurrentDir() / "\0", ["*.wav"], ".WAV files")
+
+    # var seqFrame = 0
      
     let f = open(path, fmWrite)
     defer: f.close()
@@ -69,9 +97,11 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
     let waveDiv05 = wavDiv + 0.5
 
     if(sequence):
+        # igOpenPopup("Exporting sequence")
         let tmpMac = synthContext.macroFrame
         for i in 0..<synthContext.macroLen:
             synthContext.macroFrame = i
+            # seqFrame = i
             synthesize()
 
             for j in 0..<synthContext.waveDims.x:
@@ -90,8 +120,11 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
 
                 let myOut = (round((sample) * ((1 shl (8 - 1))).float64)).int16
                 discard f.writeBytes(@[myOut.byte], 0, 1)
+            # drawPopup(seqFrame, synthContext.macroLen - 1)
+
         synthContext.macroFrame = tmpMac
         synthesize()
+        # igCloseCurrentPopup()
     else:
         for j in 0..<synthContext.waveDims.x:
             var sample = outputInt[j].float64

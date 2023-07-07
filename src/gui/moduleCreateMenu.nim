@@ -239,6 +239,11 @@ proc drawContextMenu(cellIndex: int): void {.inline.} =
         synthContext.moduleList[cellIndex] = constructFeedbackModule()
         synthesize()
 
+    if(igMenuItem("Fast FM Feedback")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructFastFeedbackModule()
+        synthesize()
+
     if(igMenuItem("Downsampler")):
         oldModule.breakAllLinks()
         synthContext.moduleList[cellIndex] = constructDownsamplerModule()
@@ -279,14 +284,34 @@ proc drawContextMenu(cellIndex: int): void {.inline.} =
         synthContext.moduleList[cellIndex] = constructBqFilterModule()
         synthesize()
 
+    if(igMenuItem("Fast Biquad Filter")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructFastBqFilterModule()
+        synthesize()
+
     if(igMenuItem("Chebyshev Filter")):
         oldModule.breakAllLinks()
         synthContext.moduleList[cellIndex] = constructChebyshevFilterModule()
+        synthesize()
+
+    if(igMenuItem("Fast Chebyshev Filter")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructFastChebyshevFilterModule()
         synthesize()
     
     if(igMenuItem("Unison")):
         oldModule.breakAllLinks()
         synthContext.moduleList[cellIndex] = constructUnisonModule()
+        synthesize()
+
+    if(igMenuItem("Quad Wave Assembler")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructQuadWaveAssemblerModule()
+        synthesize()
+
+    if(igMenuItem("Calculator")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructCalculatorModule()
         synthesize()
 
 proc drawModuleCreationContextMenu*(cellIndex: int): void {.inline.} =

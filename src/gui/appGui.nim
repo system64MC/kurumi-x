@@ -3,20 +3,24 @@ import nimgl/[opengl, glfw]
 import outputWIndow
 import grid
 import moduleCreateMenu
+import moduleDraw
 import ../synthesizer/exportFile
+import ../synthesizer/globals
+import std/os
 
 let demo = true
 
-proc drawApp*(w: GLFWWindow): void {.inline.} =
-    var style = igGetStyle()
+proc drawApp*(): void {.inline.} =
+    # var style = igGetStyle()
 
     glfwPollEvents()
+
 
     igOpenGL3NewFrame()
     igGlfwNewFrame()
     igNewFrame()
 
-    # igShowDemoWindow(demo.addr)
+    igShowDemoWindow(demo.addr)
     if(igBeginMainMenuBar()):
         if(igBeginMenu("File")):
             if(igMenuItem("Save patch")):
@@ -56,14 +60,14 @@ proc drawApp*(w: GLFWWindow): void {.inline.} =
     drawOutputWindow()
 
     igRender()
-    # sleep(5)
 
     glClearColor(0.45f, 0.55f, 0.60f, 1.00f)
     glClear(GL_COLOR_BUFFER_BIT)
 
     igOpenGL3RenderDrawData(igGetDrawData())
 
-    w.swapBuffers()
+    window.swapBuffers()
     glfwSwapInterval(1)
+    sleep(5)
 
   

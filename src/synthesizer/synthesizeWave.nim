@@ -2,8 +2,11 @@ import globals
 import modules/outputModule
 import math
 import strutils
+# import kissfft/kissfft
+import fourierTransform
 
 proc synthesize*(): void =
+
     for m in synthContext.moduleList:
         if(m == nil): continue
         m.update = true
@@ -20,6 +23,8 @@ proc synthesize*(): void =
             sum += outModule.synthesize((i.float64 + j) * PI * 2 / synthContext.waveDims.x.float64, outModule.inputs[0].pinIndex) * overSampleValue
             j += overSampleValue
         outputFloat[i] = sum
+
+    # fourierTransform(outputFloat.addr, synthContext.waveDims.x)
 
     for i in 0..<synthContext.waveDims.x:
         var value = min(max(outputFloat[i], -1.0), 1.0) + 1

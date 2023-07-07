@@ -14,6 +14,7 @@ const vampires = [
     "Alucard",
     "Krul Tepes",
     "Dracula",
+    "Mikaela Hyakuya"
 ]
 
 proc boot*(): void =
@@ -27,31 +28,31 @@ proc boot*(): void =
     glfwWindowHint(GLFWOpenglForwardCompat, GLFW_TRUE)
     glfwWindowHint(GLFWOpenglProfile, GLFW_OPENGL_CORE_PROFILE)
     glfwWindowHint(GLFWResizable, GLFWTrue)
-    var w: GLFWWindow = glfwCreateWindow(1280, 800, ("Kurumi-X ~ Modular Wavetable Workstation\t [" & vampires[rand(vampires.len - 1)] & "]").cstring)
-    if w == nil:
+    window = glfwCreateWindow(1280, 800, ("Kurumi-X ~ Modular Wavetable Workstation\t [" & vampires[rand(vampires.len - 1)] & "]").cstring)
+    if window == nil:
         quit(-1)
 
-    w.makeContextCurrent()
+    window.makeContextCurrent()
 
     doAssert glInit()
 
     let context = igCreateContext()
     #let io = igGetIO()
 
-    doAssert igGlfwInitForOpenGL(w, true)
+    doAssert igGlfwInitForOpenGL(window, true)
     doAssert igOpenGL3Init()
 
     echo "hi"
     loadState()
 
-    while not w.windowShouldClose:
-        drawApp(w)
+    while not window.windowShouldClose:
+        drawApp()
 
     saveState()
     igOpenGL3Shutdown()
     igGlfwShutdown()
     context.igDestroyContext()
 
-    w.destroyWindow()
+    window.destroyWindow()
     glfwTerminate()
     return

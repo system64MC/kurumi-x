@@ -120,7 +120,7 @@ method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64
                 module.buffer[i] = 0
         else:
             # Preheat
-            for a in 0..<11:
+            for a in 0..<64:
                 for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
                     let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)

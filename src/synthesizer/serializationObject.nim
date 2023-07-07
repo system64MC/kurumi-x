@@ -38,7 +38,13 @@ type
         WAVE_FOLDER,
         WAVE_FOLD,
         MIRROR,
-        CH_FILTER
+        CH_FILTER,
+        QUAD_WAVE_ASM,
+        CALCULATOR,
+        FAST_FEEDBACK,
+        FAST_BQ_FILTER,
+        FAST_CH_FILTER,
+        BOX
 
     ModuleSerializationObject* = object
         mType*: ModuleType

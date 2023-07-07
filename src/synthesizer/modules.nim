@@ -33,7 +33,13 @@ import modules/[
     bqFilterModule,
     unisonModule,
     noiseModule,
-    chebyshevFilterModule
+    chebyshevFilterModule,
+    quadWaveAssemblerModule,
+    calculatorModule,
+    fastFeedbackModule,
+    fastBqFilterModule,
+    fastChebyshevFilterModule,
+    boxModule
 ]
 
 
@@ -72,3 +78,9 @@ export bqFilterModule
 export unisonModule
 export noiseModule
 export chebyshevFilterModule
+export quadWaveAssemblerModule
+export calculatorModule
+export fastFeedbackModule
+export fastBqFilterModule
+export fastChebyshevFilterModule
+export boxModule

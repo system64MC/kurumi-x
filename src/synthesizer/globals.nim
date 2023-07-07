@@ -3,6 +3,10 @@ import synth
 import ./utils/utils
 import math
 import std/marshal
+import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
+import nimgl/[opengl, glfw]
+
+var window*: GLFWWindow
 
 var synthContext*: ref Synth = (ref Synth)()
 

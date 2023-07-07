@@ -252,6 +252,19 @@ method draw(module: FmodModule, index: int): void {.inline.} =
     igEndColumns()
     return
 
+var selectedPopupModule: SynthModule = nil
+var modalOpen = false
+
+# proc drawModal*(): void {.inline.} =
+#     # if(selectedPopupModule == nil): return
+#     echo modalOpen
+#     if(igBeginPopupModal("testAAAA", modalOpen.addr)):
+#         igText("Amogus")
+#         igEndPopup()
+#     return
+
+proc lerp(x, y, a: float32): float32 =
+    return x*(1-a) + y*a  
 method draw(module: FmProModule, index: int): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
@@ -265,14 +278,141 @@ method draw(module: FmProModule, index: int): void {.inline.} =
 
     # igBeginChild("matrix")
 
-    igBeginTable("opMatrix", 6)
-    for i in 0..<6:
-        for j in 0..<6:
-            igTableNextColumn()
-            if(igCheckbox(("##op" & $i & $j).cstring, module.matrix[i][j].addr)):
-                synthesize()
+    # igBeginTable("opMatrix", 6)
+    # for i in 0..<6:
+    #     for j in 0..<6:
+    #         igTableNextColumn()
+    #         if(igCheckbox(("##op" & $i & $j).cstring, module.matrix[i][j].addr)):
+    #             synthesize()
     
-    igEndTable()
+    # igEndTable()
+
+
+    if(igButton("Edit matrix")):
+        igOpenPopup("Modulation Matrix")
+
+    igPushStyleVar(ImGuiStyleVar.ChildBorderSize, 1)
+            
+    if(igBeginPopupModal("Modulation Matrix", nil)):
+
+        igBeginTable("opOsc", 8, flags = (ImGuiTableFlags.SizingFixedSame.int).ImGuiTableFlags)
+        for a in 0..<8:
+            igTableNextColumn()
+            igText(("Operator " & $(a + 1)).cstring)
+            igBeginChild(("##oscOp" & $a).cstring, ImVec2(x: OSC_W + 8, y: OSC_H + 4), true, ImGuiWindowFlags.NoResize)
+            var position = ImVec2()
+            igGetWindowPosNonUDT(position.addr)
+            var dl = igGetWindowDrawList()
+            for i in 0..<OSC_W.int:
+                var color = COLOR_NORMAL
+                let half = (OSC_H / 2)
+                var sum = 0.0
+                let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, a)
+                sum += sample
+                if(sum > 1 or sum < -1): color = COLOR_SATURATE
+                let x = (sum) * half
+                dl.addRectFilled(ImVec2(x: position.x + i.float64 + 4, y: position.y + half + 2), ImVec2(x: position.x + i.float64 + 1 + 4, y: position.y + half + x + 2), color)
+            igEndChild()
+        igEndTable()
+
+        igText("Note : You can CTRL + Left click on a slider to edit the value manually.")
+        igBeginTable("opMatrix", 8, flags = (ImGuiTableFlags.SizingFixedSame.int).ImGuiTableFlags)
+        for i in 0..<8:
+            for j in 0..<8:
+                let index = i * 8 + j
+                igTableNextColumn()
+                igBeginChild(($index).cstring, ImVec2(x: 128, y: 40), true, ImGuiWindowFlags.NoResize)
+                let colGrab = igGetStyleColorVec4(ImGuiCol.SliderGrab)
+                let colActive = igGetStyleColorVec4(ImGuiCol.SliderGrabActive)
+                let bg = igGetStyleColorVec4(ImGuiCol.FrameBg)
+                let bgHover = igGetStyleColorVec4(ImGuiCol.FrameBgHovered)
+                let bgActive = igGetStyleColorVec4(ImGuiCol.FrameBgActive)
+
+                var h, s, v: float32
+                var h2, s2, v2: float32
+                var h3, s3, v3: float32
+                var h4, s4, v4: float32
+                var h5, s5, v5: float32
+
+                igColorConvertRGBtoHSV(colGrab.x, colGrab.y, colGrab.z, h.addr, s.addr, v.addr)
+                igColorConvertRGBtoHSV(colActive.x, colActive.y, colActive.z, h2.addr, s2.addr, v2.addr)
+                igColorConvertRGBtoHSV(bg.x, bg.y, bg.z, h3.addr, s3.addr, v3.addr)
+                igColorConvertRGBtoHSV(bgHover.x, bgHover.y, bgHover.z, h4.addr, s4.addr, v4.addr)
+                igColorConvertRGBtoHSV(bgActive.x, bgActive.y, bgActive.z, h5.addr, s5.addr, v5.addr)
+                
+                let hc = h
+                let hc2 = h2
+                let hc3 = h3
+                let hc4 = h4
+                let hc5 = h5
+
+                # h = lerp(0, h, h * -(0 - (module.modMatrix[index] / 4)))
+                # h2 = lerp(0, h2, h2 * -(0 - (module.modMatrix[index] / 4)))
+                h = h - h * -(0 - (module.modMatrix[index] / 4))
+                h2 = h2 - h2 * -(0 - (module.modMatrix[index] / 4))
+                h3 = h3 - h3 * -(0 - (module.modMatrix[index] / 4))
+                h4 = h4 - h4 * -(0 - (module.modMatrix[index] / 4))
+                h5 = h5 - h5 * -(0 - (module.modMatrix[index] / 4))
+
+                var r, g, b: float32
+                var r2, g2, b2: float32
+                var r3, g3, b3: float32
+                var r4, g4, b4: float32
+                var r5, g5, b5: float32
+
+                igColorConvertHSVtoRGB(clamp(h , 0, hc ), s, v, r.addr, g.addr, b.addr)
+                igColorConvertHSVtoRGB(clamp(h2, 0, hc2), s2, v2, r2.addr, g2.addr, b2.addr)
+                igColorConvertHSVtoRGB(clamp(h3, 0, hc3), s3, v3, r3.addr, g3.addr, b3.addr)
+                igColorConvertHSVtoRGB(clamp(h4, 0, hc4), s4, v4, r4.addr, g4.addr, b4.addr)
+                igColorConvertHSVtoRGB(clamp(h5, 0, hc5), s5, v5, r5.addr, g5.addr, b5.addr)
+
+                igPushStyleColor(ImGuiCol.SliderGrab, ImVec4(
+                    x: r,
+                    y: g,
+                    z: b,
+                    w: colGrab.w
+                    ))
+
+                igPushStyleColor(ImGuiCol.SliderGrabActive, ImVec4(
+                    x: r2,
+                    y: g2,
+                    z: b2,
+                    w: colActive.w
+                    ))
+
+                igPushStyleColor(ImGuiCol.FrameBg, ImVec4(
+                    x: r3,
+                    y: g3,
+                    z: b3,
+                    w: bg.w
+                    ))
+                
+                igPushStyleColor(ImGuiCol.FrameBgHovered, ImVec4(
+                    x: r4,
+                    y: g4,
+                    z: b4,
+                    w: bgHover.w
+                    ))
+
+                igPushStyleColor(ImGuiCol.FrameBgActive, ImVec4(
+                    x: r5,
+                    y: g5,
+                    z: b5,
+                    w: bgActive.w
+                    ))
+
+                if(igSliderFloat(("##opSlider" & $i & $j).cstring, module.modMatrix[index].addr, 0, 4)):
+                    synthesize()
+                igPopStyleColor(5)
+                igEndChild()
+        
+        igEndTable()
+
+        if(igButton("Close")):
+            igCloseCurrentPopup()
+        igEndPopup()
+    igPopStyleVar()
+
     # igEndChild()
 
     igSetColumnOffset(2, vec.x - 20)
@@ -445,6 +585,119 @@ method draw(module: WavetableOscillatorModule, index: int): void {.inline.} =
     if(igSliderInt("Interpolation", module.interpolation.addr, 0, interpolations.len - 1, format = interpolations[module.interpolation])):
         module.interpolation = clamp(module.interpolation, 0, interpolations.len - 1)
         synthesize()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
+method draw(module: CalculatorModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Calculator", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index)
+
+        var str = ($module.formula)
+        str.setLen((module.formula.len) + 1024)
+        var strC = str.cstring
+        if(igInputTextMultiline("##0", strC, str.len.uint32 + 1024 + 1, size = ImVec2(x: 128, y: 100), flags = ImGuiInputTextFlags.AllowTabInput)):
+            module.formula = $strC
+            # module.refreshWaveform()
+            synthesize()
+
+        if(igButton("Edit")):
+            igOpenPopup("Formula editor")
+            
+
+        # igPushStyleVar(ImGuiStyleVar.ChildBorderSize, 1)
+        if(igBeginPopupModal("Formula editor", nil, flags = ImGuiWindowFlags.NoResize)):
+            igSetWindowSize("Formula editor", ImVec2(x: 660, y: 550))
+            igBeginTabBar("tabs2")
+            if(igBeginTabItem("General##1")):
+                igBeginTable("", 2)
+                igTableNextColumn()
+                igBeginChild("", ImVec2(x: 320+80, y: 460+20), flags = ImGuiWindowFlags.NoResize)
+                if(igInputTextMultiline("##1", strC, str.len.uint32 + 1024 + 1, size = ImVec2(x: 320, y: 470), flags = ImGuiInputTextFlags.AllowTabInput)):
+                    module.formula = $strC
+                    # module.refreshWaveform()
+                    synthesize()
+                igEndChild()
+                if(igButton("Close")):
+                    igCloseCurrentPopup()
+                igTableNextColumn()
+                igBeginChild("#111")
+                module.drawOscilloscope(index)
+                igBeginChild("", ImVec2(x: 320+80, y: 400), flags = ImGuiWindowFlags.NoResize)
+                igText("Variables :")
+                igText("x -> the current X value.")
+                igText("a -> value returned by first pin.")
+                igText("b -> value returned by second pin.")
+                igText("c -> value returned by third pin.")
+                igText("d -> value returned by fourth pin.")
+                igText("fb -> previous result")
+                igText("wl -> Length of final waveform")
+                igText("wh -> Height of final waveform")
+                
+                igText("env -> Current envelope value")
+                igText("est -> Envelope Start")
+                igText("ea1 -> Envelope Attack 1")
+                igText("ep1 -> Envelope Peak 1")
+                igText("ed1 -> Envelope Decay 1")
+                igText("es1 -> Envelope SUStain 1")
+                igText("ea2 -> Envelope Attack 2")
+                igText("ep2 -> Envelope Peak 2")
+                igText("ed2 -> Envelope Decay 2")
+                igText("es2 -> Envelope SUStain 2\n")
+
+                igText("pi -> 3.1415...")
+                igText("tau -> 2x pi")
+                igText("e -> Euler's number")
+                igText("flan -> Q.E.D. \"Ripples of 495 Years\"\n")
+
+                igText("\nFunctions :")
+                igText("synth(pin, x) -> synthesizes the previous\nmodule with a given pin and X value.")
+                igText("avg(var1, var2,...) -> Return the average of\nall arguments.")
+                igText("clamp(min, x, max) -> Clamp X between\nmin and max.")
+                igText("sin(x) -> Returns the sine of X")
+                igText("cos(x) -> Returns the cosine of X")
+                igText("tan(x) -> Returns the tangent of X")
+                igText("asin(x) -> Returns the arcsin of X")
+                igText("acos(x) -> Returns the arccos of X")
+                igText("atan(x) -> Returns the htan of X")
+                igText("sinh(x) -> Returns the hsin of X")
+                igText("cosh(x) -> Returns the hcos of X")
+                igText("tanh(x) -> Returns the htan of X")
+                igText("floor(x)")
+                igText("ceil(x)")
+                igText("ln(x)")
+                igText("log10(x)")
+                igText("log2(x)")
+                igText("max(var1, var2, ...)")
+                igText("min(var1, var2, ...)")
+                igText("pow(x, y)")
+                igText("exp(x)")
+                igEndChild()
+                igEndChild()
+                igEndTable()
+                igEndTabItem()
+            if(igBeginTabItem("ADSR##1")):
+                module.envelope.addr.drawEnvelope(4)
+                igEndTabItem()
+            igEndTabBar()
+            igEndPopup()
+        igEndTabItem()
+    if(igBeginTabItem("ADSR")):
+        module.envelope.addr.drawEnvelope(4)
+        igEndTabItem()
+    igEndTabBar()
+
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
     drawOutputs(module, index)
@@ -814,6 +1067,34 @@ method draw(module: FeedbackModule, index: int): void {.inline.} =
     igEndColumns()
     return
 
+method draw(module: FastFeedbackModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Fast FM Feedback", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index)
+        if(igSliderFloat("Feedback", module.fbEnvelope.peak.addr, 0.0f, 4.0f)):
+            synthesize()
+        if(igCheckbox("Use ADSR", module.useAdsr.addr)):
+            synthesize()
+        igEndTabItem()
+    if(module.useAdsr):
+        if(igBeginTabItem("ADSR")):
+            module.fbEnvelope.addr.drawEnvelope(4)
+            igEndTabItem()
+    igEndTabBar()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
 method draw(module: DownsamplerModule, index: int): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
@@ -1040,6 +1321,58 @@ method draw(module: BqFilterModule, index: int): void {.inline.} =
     igEndColumns()
     return
 
+method draw(module: FastBqFilterModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Fast Biquad Filter", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    
+
+
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        igBeginChild("child")
+        module.drawOscilloscope(index)
+        module.drawOscilloscope(index)
+        if(igSliderInt("Type", module.filterType.addr, 0, filterTypes.len - 1, format = filterTypes[module.filterType])):
+            module.filterType = clamp(module.filterType, 0, filterTypes.len - 1)
+            synthesize()
+        if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
+            synthesize()
+        if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
+            synthesize()
+        if(igSliderInt("Pitch", module.note.addr, 0, 96)):
+            synthesize()
+        if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
+            synthesize()
+        if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
+            synthesize()
+        if(igCheckbox("Normalize", module.normalize.addr)):
+            synthesize()
+        igEndChild()
+        igEndTabItem()
+    if(module.useCutoffEnvelope):
+        if(igBeginTabItem("Cut. ADSR")):
+            module.cutoffEnvelope.addr.drawEnvelope(1)
+            igEndTabItem()
+
+    if(module.useQEnvelope):
+        if(igBeginTabItem("Res. ADSR")):
+            module.qEnvelope.addr.drawEnvelope(4)
+            igEndTabItem()
+    igEndTabBar()
+
+    # igText(foldTypes[module.waveFoldType])
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
 
 const chFilterTypes: array[2, cstring] = ["Lowpass".cstring, "Highpass"]
 method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
@@ -1059,8 +1392,62 @@ method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
         igBeginChild("child")
         module.drawOscilloscope(index)
         module.drawOscilloscope(index)
-        if(igSliderInt("Type", module.filterType.addr, 0, filterTypes.len - 1, format = chFilterTypes[module.filterType])):
-            module.filterType = clamp(module.filterType, 0, filterTypes.len - 1)
+        if(igSliderInt("Type", module.filterType.addr, 0, chFilterTypes.len - 1, format = chFilterTypes[module.filterType])):
+            module.filterType = clamp(module.filterType, 0, chFilterTypes.len - 1)
+            synthesize()
+        if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
+            synthesize()
+        if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
+            synthesize()
+        if(igSliderInt("Pitch", module.note.addr, 0, 96)):
+            synthesize()
+        if(igSliderInt("Order", module.order.addr, 0, 32)):
+            synthesize()
+        if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
+            synthesize()
+        if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
+            synthesize()
+        if(igCheckbox("Normalize", module.normalize.addr)):
+            synthesize()
+        igEndChild()
+        igEndTabItem()
+    if(module.useCutoffEnvelope):
+        if(igBeginTabItem("Cut. ADSR")):
+            module.cutoffEnvelope.addr.drawEnvelope(1)
+            igEndTabItem()
+
+    if(module.useQEnvelope):
+        if(igBeginTabItem("Res. ADSR")):
+            module.qEnvelope.addr.drawEnvelope(4)
+            igEndTabItem()
+    igEndTabBar()
+
+    # igText(foldTypes[module.waveFoldType])
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
+method draw(module: FastChebyshevFilterModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Fast Chebyshev Filter", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    
+
+
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        igBeginChild("child")
+        module.drawOscilloscope(index)
+        module.drawOscilloscope(index)
+        if(igSliderInt("Type", module.filterType.addr, 0, chFilterTypes.len - 1, format = chFilterTypes[module.filterType])):
+            module.filterType = clamp(module.filterType, 0, chFilterTypes.len - 1)
             synthesize()
         if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
             synthesize()
@@ -1134,11 +1521,28 @@ method draw(module: NoiseOscillatorModule, index: int): void {.inline.} =
     igEndColumns()
     return
 
+method draw(module: QuadWaveAssemblerModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Quad Wave Assembler", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index)
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
 proc drawModule*(index: int): void {.inline.} =
     let module = synthContext.moduleList[index]
     if(module == nil): return
 
     module.draw(index)
+
     
     # echo typeof(module)
     # if(module of SineOscillatorModule):
