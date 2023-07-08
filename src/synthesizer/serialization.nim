@@ -159,6 +159,19 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             module = mData.data.fromFlatty(FastFeedbackModule)
         of FAST_BQ_FILTER:
             module = mData.data.fromFlatty(FastBqFilterModule)
+        of BOX:
+            let sData = mData.data.fromFlatty(BoxModuleSerialize)
+            var moduleBox = BoxModule()
+            var modList: array[16 * 16, SynthModule]
+            for i in 0..<sData.data.len():
+                modList[i] = sData.data[i].unserializeModule()
+            moduleBox.inputIndex = sData.inputIndex
+            moduleBox.outputIndex = sData.outputIndex
+            moduleBox.inputs = sData.inputs
+            moduleBox.outputs = sData.outputs
+            moduleBox.moduleList = modList
+            moduleBox.name = sData.name
+            return moduleBox
         else:
             module = nil
     return module       

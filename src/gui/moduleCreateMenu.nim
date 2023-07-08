@@ -314,6 +314,11 @@ proc drawContextMenu(cellIndex: int): void {.inline.} =
         synthContext.moduleList[cellIndex] = constructCalculatorModule()
         synthesize()
 
+    if(igMenuItem("Box")):
+        oldModule.breakAllLinks()
+        synthContext.moduleList[cellIndex] = constructBoxModule()
+        synthesize()
+
 proc drawModuleCreationContextMenu*(cellIndex: int): void {.inline.} =
     if(igBeginPopupContextItem(("moduleContext" & $cellIndex).cstring)):
         drawContextMenu(cellIndex)

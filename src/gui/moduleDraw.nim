@@ -122,6 +122,7 @@ proc drawOscilloscopeOut(module: OutputModule, index: int): void {.inline.} =
     var position = ImVec2()
     igGetWindowPosNonUDT(position.addr)
     var dl = igGetWindowDrawList()
+    if(module == nil): return
     for i in 0..<OSC_W.int:
         var color = COLOR_NORMAL
         let half = (OSC_H / 2)
@@ -1536,6 +1537,135 @@ method draw(module: QuadWaveAssemblerModule, index: int): void {.inline.} =
     drawOutputs(module, index)
     igEndColumns()
     return
+
+
+const
+    WIN_PAD2 = 8.0f
+    CELL_PAD_X2 = 8.0f
+    CELL_PAD_Y2 = 4.0f
+    CELL_SIZE_X2 = 256.0f + CELL_PAD_X2
+    CELL_SIZE_Y2 = 256.0f + CELL_PAD_Y2
+    BUTTON_SIZE_Y2 = 24.0f
+
+proc `/`(vec1, vec2: ImVec2): ImVec2 =
+    return ImVec2(x: vec1.x / vec2.x, y: vec1.y / vec2.y)
+
+proc `+`(vec1, vec2: ImVec2): ImVec2 =
+    return ImVec2(x: vec1.x + vec2.x, y: vec1.y + vec2.y)
+
+var scrollPoint = ImVec2()
+
+proc drawModuleBox*(boxModule: BoxModule, index: int): void {.inline.} =
+    let module = boxModule.moduleList[index]
+    if(module == nil): return
+
+    module.draw(index)
+
+method draw(module: BoxModule, index: int): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Box", index, COLOR_OSCILLATOR.uint32)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index)
+
+    var str = ($module.name)
+    str.setLen(256)
+    var strC = str.cstring
+    if(igInputText("Box name", strC,256)):
+        module.name = $strC
+
+    let winName = "Edit Box : " & module.name
+    if(igButton("Edit")):
+        igOpenPopup(winName.cstring)
+            
+    
+        # igPushStyleVar(ImGuiStyleVar.ChildBorderSize, 1)
+    if(igBeginPopupModal(winName.cstring, nil)):
+        var size: ImVec2
+        igGetWindowSizeNonUDT(size.addr)
+        if(size.x < 512):
+            igSetWindowSize(winName.cstring, ImVec2(x: 512, y: size.y))
+        if(size.y < 512):
+            igSetWindowSize(winName.cstring, ImVec2(x: size.x, y: 512))
+
+        if(igButton("Close")):
+            igCloseCurrentPopup()
+        
+        if(igBeginTable("table", 8, (ImGuiTableFlags.SizingFixedSame.int or ImGuiTableFlags.ScrollX.int or ImGuiTableFlags.ScrollY.int).ImGuiTableFlags)):
+            for i in 0..<16:
+                igTableNextRow()
+                for j in 0..<16:
+                    igTableNextColumn()
+                    let index = i * 16 + j
+                    
+                    igBeginChild(($index).cstring, ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
+                    module.drawModuleBox(index)
+
+                    # igButton(("x:" & $j & " y:" & $i).cstring, ImVec2(x: 256, y: 256))
+                    igEndChild()
+                    # drawModuleCreationContextMenu(index)
+                    continue
+            scrollPoint.x = igGetScrollX()
+            scrollPoint.y = igGetScrollY()
+            igEndTable()
+    
+        # Drawing links
+        var dl = igGetWindowDrawList()
+        var winPos = ImVec2()
+        igGetWindowPosNonUDT(winPos.addr)
+        for i in 0..<16:
+            for j in 0..<16:
+                let index = i * 16 + j
+                let module = module.moduleList[index]
+                if(module == nil): continue
+                # echo("x : " & $j & " y: " & $i)
+                for x in 0..<module.outputs.len():
+                    let link = module.outputs[x]
+                    if(link.moduleIndex < 0 or link.pinIndex < 0): continue
+                    let destPosX = link.moduleIndex mod 16
+                    let destPosY = link.moduleIndex div 16
+                    let p1 = ImVec2(x: WIN_PAD2 - scrollPoint.x + CELL_SIZE_X2 * j.float32 + winPos.x + CELL_SIZE_X2 - 24, y: WIN_PAD2 - scrollPoint.y + CELL_SIZE_Y2 * (i.float32) + winPos.y + 60 + x.float32 * BUTTON_SIZE_Y2) 
+                    let p2 = ImVec2(x: WIN_PAD2 - scrollPoint.x + CELL_SIZE_X2 * destPosX.float32 + winPos.x + WIN_PAD2 + 4, y: WIN_PAD2 - scrollPoint.y + CELL_SIZE_Y2 * destPosY.float32 + winPos.y + 60 + link.pinIndex.float32 * BUTTON_SIZE_Y2) 
+                    # let p3 = p2 / p1
+                    let halfX = (p2.x - p1.x) / 2
+
+                    if(p1.x < p2.x):
+                        dl.addBezierCubic(p1, p1 + ImVec2(x: halfX, y: 0), p2 + ImVec2(x: -halfX, y: 0), p2, 0x7F_00_FF_FF.uint32, 4)
+                    else:
+                        dl.addBezierCubic(p1, p1 + ImVec2(x: -halfX, y: 0), p2 + ImVec2(x: halfX, y: 0), p2, 0x7F_00_FF_FF.uint32, 4)
+                    # dl.addBezierQuadratic(p1, p2, p3, ))
+
+        # draw temporary link
+        if(selectedLink.moduleIndex > -1 and selectedLink.pinIndex > -1):
+            let destPosX = selectedLink.moduleIndex mod 16
+            let destPosY = selectedLink.moduleIndex div 16
+            let p1 = ImVec2(x: WIN_PAD2 - scrollPoint.x + CELL_SIZE_X2 * destPosX.float32 + winPos.x + CELL_SIZE_X2 - 24, y: WIN_PAD2 - scrollPoint.y + CELL_SIZE_Y2 * destPosY.float32 + winPos.y + 60 + selectedLink.pinIndex.float32 * BUTTON_SIZE_Y2) 
+            var p2 = ImVec2()
+            igGetMousePosNonUDT(p2.addr)
+            let halfX = (p2.x - p1.x) / 2
+
+            if(p1.x < p2.x):
+                dl.addBezierCubic(p1, p1 + ImVec2(x: halfX, y: 0), p2 + ImVec2(x: -halfX, y: 0), p2, 0x7F_FF_00_00.uint32, 4)
+            else:
+                dl.addBezierCubic(p1, p1 + ImVec2(x: -halfX, y: 0), p2 + ImVec2(x: halfX, y: 0), p2, 0x7F_FF_00_00.uint32, 4)
+
+            if(igIsMouseDoubleClicked(ImGuiMouseButton.Left)):
+                selectedLink.moduleIndex = -1
+                selectedLink.pinIndex = -1
+        igEndPopup()
+    # if(igSliderInt("Unison", module.unison.addr, 0, 8)):
+        # synthesize()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index)
+    igEndColumns()
+    return
+
+
 
 proc drawModule*(index: int): void {.inline.} =
     let module = synthContext.moduleList[index]
