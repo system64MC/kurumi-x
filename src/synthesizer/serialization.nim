@@ -203,3 +203,34 @@ proc loadState*() =
     except IOError:
         echo "error"
         return
+
+proc saveStateHistory*(): string =
+    var obj: SynthSerializeObject
+    obj.waveDims = synthContext.waveDims
+    obj.oversample = synthContext.oversample
+    obj.outputIndex = synthContext.outputIndex
+    obj.macroLen = synthContext.macroLen
+    obj.macroFrame = synthContext.macroFrame
+
+    for n in 0..<synthContext.moduleList.len:
+        let m = synthContext.moduleList[n]
+        if(m == nil):
+            obj.moduleList[n] = ModuleSerializationObject(mType: NULL, data: "")
+            continue
+        obj.moduleList[n] = m.serialize()
+
+    let str = "VAMPIRE " & compress(toFlatty(obj))
+    return str
+
+proc loadStateHistory*(data: string) =
+    let str = data
+    if(str.substr(0, "VAMPIRE ".len - 1) != "VAMPIRE "): return
+    let data = str.substr("VAMPIRE ".len).uncompress().fromFlatty(SynthSerializeObject)
+    # let data = str.fromFlatty(SynthSerializeObject)
+    synthContext.waveDims = data.waveDims
+    synthContext.oversample = data.oversample
+    synthContext.outputIndex = data.outputIndex
+    synthContext.macroLen = data.macroLen
+    synthContext.macroFrame = data.macroFrame
+    data.unserializeModules()
+    synthesize()

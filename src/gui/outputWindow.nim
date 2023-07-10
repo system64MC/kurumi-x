@@ -3,6 +3,7 @@ import nimgl/[opengl, glfw]
 import ../synthesizer/globals
 import math
 import ../synthesizer/synthesizeWave
+import history
 # import nimclipboard/libclipboard
 
 # proc drawOscilloscope(module: SynthModule, index: int): void {.inline.} =
@@ -45,17 +46,27 @@ proc drawOutputWindow*(): void {.inline.} =
     if(igSliderInt("Length", synthContext.waveDims.x.addr, 1, 256)):
         if(synthContext.waveDims.x > 4096): synthContext.waveDims.x = 4096
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Change wave length")
     if(igSliderInt("height", synthContext.waveDims.y.addr, 1, 255)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Change wave height")
     if(igSliderInt("Oversample", synthContext.oversample.addr, 1, 8)):
         if(synthContext.oversample > 8): synthContext.oversample = 8
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Change oversample")
     if(igSliderInt("Seq. Length", synthContext.macroLen.addr, 1, 256)):
         if(synthContext.macroFrame >= synthContext.macroLen): synthContext.macroFrame = synthContext.macroLen - 1
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Change sequance length")
     if(igSliderInt("Seq. Index", synthContext.macroFrame.addr, 0, synthContext.macroLen - 1)):
         if(synthContext.macroFrame >= synthContext.macroLen): synthContext.macroFrame = synthContext.macroLen - 1
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Change sequence index")
 
     if(igButton("Copy current wave str")):
         igSetClipboardText(generateWaveStr().cstring)

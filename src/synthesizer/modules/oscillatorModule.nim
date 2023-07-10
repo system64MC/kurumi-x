@@ -50,7 +50,7 @@ proc constructSineOscillatorModule*(): SineOscillatorModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: SineOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: SineOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     let myMult = module.getMult()
     return sin((x * myMult) + (module.phase * 2 * PI + module.getPhase() * PI * 2))
 
@@ -61,7 +61,7 @@ proc constructSquareOscillatorModule*(): SquareOscillatorModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: SquareOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: SquareOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     let myMult = module.getMult()
     let val = (x * myMult / (PI * 2)) + (module.phase + module.getPhase())
     let duty = if(module.useAdsr): module.dutyEnvelope.doAdsr() else: module.dutyEnvelope.peak
@@ -73,7 +73,7 @@ proc constructTriangleOscillatorModule*(): TriangleOscillatorModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: TriangleOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: TriangleOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     let myMult = module.getMult()
     return arcsin(sin((x * myMult) + (module.phase * 2 * PI + (module.getPhase() * PI * 2)))) / (PI * 0.5)
 
@@ -83,7 +83,7 @@ proc constructSawOscillatorModule*(): SawOscillatorModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: SawOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: SawOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     let myMult = module.getMult()
     return arctan(tan((x / 2)*myMult+module.phase*math.Pi + (module.getPhase() * PI))) / (Pi * 0.5)
 
@@ -126,7 +126,7 @@ method interpolate(module: WavetableOscillatorModule, x: float64): float64 {.bas
         return 0
     
 
-method synthesize(module: WavetableOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: WavetableOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     let myMult = module.getMult()
     let x2 = ((x * myMult) + (module.phase * 2 * PI + module.getPhase() * PI * 2)) / (2 * PI)
     return module.interpolate(x2)

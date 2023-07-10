@@ -44,6 +44,8 @@ import ../synthesizer/utils/utils
 import ../synthesizer/linkManagement
 import ../synthesizer/synthesizeWave
 import ../synthesizer/modules
+import moduleCreateMenu
+import history
 import std/strutils
 import math
 
@@ -59,7 +61,7 @@ const
     OSC_W = 128.0
     OSC_H = 64.0
 
-proc drawTitleBar(text: cstring, index: int, color: uint32 = 0xFF000000.uint32): void {.inline.} =
+proc drawTitleBar(text: cstring, index: int, color: uint32 = 0xFF000000.uint32, moduleList: var array[256, SynthModule]): void {.inline.} =
     # return
     var vec = ImVec2()
     igPushStyleColor(ImGuiCOl.ChildBg, color)
@@ -71,10 +73,11 @@ proc drawTitleBar(text: cstring, index: int, color: uint32 = 0xFF000000.uint32):
     igText(text)
     igSameLine(x + vec.x - 24)
     # igSetCursorPosX(x + vec.x - 24)
-    if not(synthContext.moduleList[index] of OutputModule):
+    if not(moduleList[index] of OutputModule):
         if(igButton("X", ImVec2(x: 16, y: 16))):
-            deleteModule(index)
+            deleteModule(index, moduleList)
             synthesize()
+            registerHistoryEvent("Delete module")
     igEndChild()
     igPopStyleColor()
     # igSetCursorPosY(y + 24)
@@ -82,19 +85,21 @@ proc drawTitleBar(text: cstring, index: int, color: uint32 = 0xFF000000.uint32):
 
 
 
-proc drawInputs(module: SynthModule, index: int): void {.inline.} =
+proc drawInputs(module: SynthModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     for i in 0..<module.inputs.len():
         if(igButton(("I##" & $i).cstring)):
             if(selectedLink.moduleIndex > -1 and selectedLink.pinIndex > -1):
-                module.makeLink(index, i)
+                module.makeLink(index, i, moduleList)
+                registerHistoryEvent("Create Link")
             else:
-                module.breakLinksInput(i)
+                module.breakLinksInput(i, moduleList)
+                registerHistoryEvent("Break Link")
             synthesize()
 
-proc drawOutputs(module: SynthModule, index: int): void {.inline.} =
+proc drawOutputs(module: SynthModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     for i in 0..<module.outputs.len():
         if(igButton(("O##" & $i).cstring)):
-            if(module.outputs[i].moduleIndex > -1 or module.outputs[i].pinIndex > -1): module.breakLinksOutput(i)
+            if(module.outputs[i].moduleIndex > -1 or module.outputs[i].pinIndex > -1): module.breakLinksOutput(i, moduleList)
             selectedLink.moduleIndex = index.int16
             selectedLink.pinIndex = i.int16
             synthesize()
@@ -103,7 +108,7 @@ const
     COLOR_NORMAL = 0xFF_FF_FF_FF.uint32
     COLOR_SATURATE = 0xFF_7F_7F_FF.uint32
 
-proc drawOscilloscope(module: SynthModule, index: int): void {.inline.} =
+proc drawOscilloscope(module: SynthModule, index: int, moduleList: array[256, SynthModule]): void {.inline.} =
     igBeginChild("osc", ImVec2(x: OSC_W + 8, y: OSC_H + 4), true)
     var position = ImVec2()
     igGetWindowPosNonUDT(position.addr)
@@ -111,28 +116,28 @@ proc drawOscilloscope(module: SynthModule, index: int): void {.inline.} =
     for i in 0..<OSC_W.int:
         var color = COLOR_NORMAL
         let half = (OSC_H / 2)
-        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, 0)
+        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, 0, moduleList)
         if(sample > 1 or sample < -1): color = COLOR_SATURATE
         let x = (sample) * half
         dl.addRectFilled(ImVec2(x: position.x + i.float64 + 4, y: position.y + half + 2), ImVec2(x: position.x + i.float64 + 1 + 4, y: position.y + half + x + 2), color)
     igEndChild()
 
-proc drawOscilloscopeOut(module: OutputModule, index: int): void {.inline.} =
+proc drawOscilloscopeOut(module: OutputModule, index: int, moduleList: array[256, SynthModule]): void {.inline.} =
     igBeginChild("osc", ImVec2(x: OSC_W + 8, y: OSC_H + 4), true)
     var position = ImVec2()
     igGetWindowPosNonUDT(position.addr)
     var dl = igGetWindowDrawList()
-    if(module == nil): return
+    # if(module == nil): return
     for i in 0..<OSC_W.int:
         var color = COLOR_NORMAL
         let half = (OSC_H / 2)
-        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, module.inputs[0].pinIndex)
+        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, module.inputs[0].pinIndex, moduleList)
         if(sample > 1 or sample < -1): color = COLOR_SATURATE
         let x = (sample) * half
         dl.addRectFilled(ImVec2(x: position.x + i.float64 + 4, y: position.y + half + 2), ImVec2(x: position.x + i.float64 + 1 + 4, y: position.y + half + x + 2), color)
     igEndChild()
 
-proc drawOscilloscopeFMPro(module: FmProModule, index: int): void {.inline.} =
+proc drawOscilloscopeFMPro(module: FmProModule, index: int, moduleList: array[256, SynthModule]): void {.inline.} =
     igBeginChild("osc", ImVec2(x: OSC_W + 8, y: OSC_H + 4), true)
     var position = ImVec2()
     igGetWindowPosNonUDT(position.addr)
@@ -142,7 +147,7 @@ proc drawOscilloscopeFMPro(module: FmProModule, index: int): void {.inline.} =
         let half = (OSC_H / 2)
         var sum = 0.0
         for pin in 0..<6:
-            let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, pin)
+            let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, pin, moduleList)
             sum += sample
         if(sum > 1 or sum < -1): color = COLOR_SATURATE
         let x = (sum) * half
@@ -194,62 +199,82 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
 
     if(igSliderFloat("Start", adsrPtr.start.addr, 0, maxPeak)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Start")
 
     if(igSliderInt("Attack", adsrPtr.attack.addr, 0, 256)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Attack")
 
     if(igSliderFloat("Peak", adsrPtr.peak.addr, 0, maxPeak)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Peak")
 
     if(igSliderInt("Decay", adsrPtr.decay.addr, 0, 256)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Decay")
 
     if(igSliderFloat("Sus", adsrPtr.sustain.addr, 0, maxPeak)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Sustain")
 
     if(igSliderInt("Attack 2", adsrPtr.attack2.addr, 0, 256)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Attack 2")
 
     if(igSliderFloat("Peak 2", adsrPtr.peak2.addr, 0, maxPeak)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Peak 2")
 
     if(igSliderInt("Decay 2", adsrPtr.decay2.addr, 0, 256)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Decay 2")
 
     if(igSliderFloat("Sus 2", adsrPtr.sustain2.addr, 0, maxPeak)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit ADSR Sustain 2")
+        
     igText(("Keyframes : " & $(adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2 + adsrPtr.decay2)).cstring)
     igEndChild()
     
-method draw(module: SynthModule, index: int): void {.inline, base.} =
-    var vec = ImVec2()
-    igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("DUMMY MODULE", index, COLOR_FM.uint32)
-    igColumns(3, nil, border = false)
-    igSetColumnOffset(0, 0)
-    drawInputs(module, index)
-    igSetColumnOffset(1, 20)
-    igNextColumn()
-    module.drawOscilloscope(index)
-    igSetColumnOffset(2, vec.x - 20)
-    igNextColumn()
-    drawOutputs(module, index)
-    igEndColumns()
+method draw(module: SynthModule, index: int, moduleList: var array[256, SynthModule]): void {.inline, base.} =
+    
+    # var vec = ImVec2()
+    # igGetContentRegionAvailNonUDT(vec.addr)
+    # drawTitleBar("DUMMY MODULE", index, COLOR_FM.uint32)
+    # igColumns(3, nil, border = false)
+    # igSetColumnOffset(0, 0)
+    # drawInputs(module, index, moduleList)
+    # igSetColumnOffset(1, 20)
+    # igNextColumn()
+    # module.drawOscilloscope(index, moduleList)
+    # igSetColumnOffset(2, vec.x - 20)
+    # igNextColumn()
+    # drawOutputs(module, index, moduleList)
+    # igEndColumns()
     return
 
-method draw(module: FmodModule, index: int): void {.inline.} =
+method draw(module: FmodModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("FM", index, COLOR_FM.uint32)
+    drawTitleBar("FM", index, COLOR_FM.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
@@ -266,16 +291,16 @@ var modalOpen = false
 
 proc lerp(x, y, a: float32): float32 =
     return x*(1-a) + y*a  
-method draw(module: FmProModule, index: int): void {.inline.} =
+method draw(module: FmProModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("FM Pro", index, COLOR_FM.uint32)
+    drawTitleBar("FM Pro", index, COLOR_FM.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscopeFMPro(index)
+    module.drawOscilloscopeFMPro(index, moduleList)
 
     # igBeginChild("matrix")
 
@@ -308,7 +333,7 @@ method draw(module: FmProModule, index: int): void {.inline.} =
                 var color = COLOR_NORMAL
                 let half = (OSC_H / 2)
                 var sum = 0.0
-                let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, a)
+                let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, a, moduleList)
                 sum += sample
                 if(sum > 1 or sum < -1): color = COLOR_SATURATE
                 let x = (sum) * half
@@ -404,6 +429,8 @@ method draw(module: FmProModule, index: int): void {.inline.} =
 
                 if(igSliderFloat(("##opSlider" & $i & $j).cstring, module.modMatrix[index].addr, 0, 4)):
                     synthesize()
+                if(igIsItemDeactivated()):
+                    registerHistoryEvent("Edit FM Pro Modulation Matrix")
                 igPopStyleColor(5)
                 igEndChild()
         
@@ -418,132 +445,159 @@ method draw(module: FmProModule, index: int): void {.inline.} =
 
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: MixerModule, index: int): void {.inline.} =
+method draw(module: MixerModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Mixer", index, COLOR_MIXER.uint32)
+    drawTitleBar("Mixer", index, COLOR_MIXER.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: AverageModule, index: int): void {.inline.} =
+method draw(module: AverageModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Average", index, COLOR_MIXER.uint32)
+    drawTitleBar("Average", index, COLOR_MIXER.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SineOscillatorModule, index: int): void {.inline.} =
+method draw(module: SineOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Sine Oscillator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Sine Oscillator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Sine OSC. Mult")
     if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Sine OSC. Phase")
     if(igSliderInt("Detune", module.detune.addr, -32, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Sine OSC. Detune")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: TriangleOscillatorModule, index: int): void {.inline.} =
+method draw(module: TriangleOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Triangle Oscillator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Triangle Oscillator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Triangle OSC. Mult")
     if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Triangle OSC. Phase")
     if(igSliderInt("Detune", module.detune.addr, -32, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Triangle OSC. Detune")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SawOscillatorModule, index: int): void {.inline.} =
+method draw(module: SawOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Saw Oscillator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Saw Oscillator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Saw OSC. Mult")
     if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Saw OSC. Phase")
     if(igSliderInt("Detune", module.detune.addr, -32, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Saw OSC. Detune")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SquareOscillatorModule, index: int): void {.inline.} =
+method draw(module: SquareOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Pulse Oscillator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Pulse Oscillator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
 
 
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Pulse OSC. Mult")
         if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Pulse OSC. Phase")
         if(igSliderFloat("P. Width", module.dutyEnvelope.peak.addr, 0f, 1f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Pulse OSC. P. Width")
         if(igSliderInt("Detune", module.detune.addr, -32, 32)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Pulse OSC. Detune")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Edit Pulse OSC. Use ADSR")
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -553,27 +607,33 @@ method draw(module: SquareOscillatorModule, index: int): void {.inline.} =
     
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 const interpolations: array[3, cstring] = ["Nearest".cstring, "Linear", "Cubic"]
-method draw(module: WavetableOscillatorModule, index: int): void {.inline.} =
+method draw(module: WavetableOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Wavetable Oscillator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Wavetable Oscillator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Mult.", module.mult.addr, 0, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Wavetable OSC. Mult")
     if(igSliderFloat("Phase", module.phase.addr, 0f, 1f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Wavetable OSC. Phase")
     if(igSliderInt("Detune", module.detune.addr, -32, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Wavetable OSC. Detune")
 
     var str = ($module.waveStr)
     str.setLen((module.waveStr.len) + 1024)
@@ -582,28 +642,31 @@ method draw(module: WavetableOscillatorModule, index: int): void {.inline.} =
         module.waveStr = $strC
         module.refreshWaveform()
         synthesize()
+        registerHistoryEvent("Edit Wavetable OSC. Wave")
 
     if(igSliderInt("Interpolation", module.interpolation.addr, 0, interpolations.len - 1, format = interpolations[module.interpolation])):
         module.interpolation = clamp(module.interpolation, 0, interpolations.len - 1)
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Wavetable OSC. Interpolation")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: CalculatorModule, index: int): void {.inline.} =
+method draw(module: CalculatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Calculator", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Calculator", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
 
         var str = ($module.formula)
         str.setLen((module.formula.len) + 1024)
@@ -612,6 +675,7 @@ method draw(module: CalculatorModule, index: int): void {.inline.} =
             module.formula = $strC
             # module.refreshWaveform()
             synthesize()
+            registerHistoryEvent("Edit Calculator formula")
 
         if(igButton("Edit")):
             igOpenPopup("Formula editor")
@@ -629,12 +693,13 @@ method draw(module: CalculatorModule, index: int): void {.inline.} =
                     module.formula = $strC
                     # module.refreshWaveform()
                     synthesize()
+                    registerHistoryEvent("Edit Calculator formula")
                 igEndChild()
                 if(igButton("Close")):
                     igCloseCurrentPopup()
                 igTableNextColumn()
                 igBeginChild("#111")
-                module.drawOscilloscope(index)
+                module.drawOscilloscope(index, moduleList)
                 igBeginChild("", ImVec2(x: 320+80, y: 400), flags = ImGuiWindowFlags.NoResize)
                 igText("Variables :")
                 igText("x -> the current X value.")
@@ -701,26 +766,29 @@ method draw(module: CalculatorModule, index: int): void {.inline.} =
 
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: AmplifierModule, index: int): void {.inline.} =
+method draw(module: AmplifierModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Amplifier", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Amplifier", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Amp.", module.envelope.peak.addr, 0.0f, 4.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Amplifier volume")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Amplifier use ADSR" & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -729,98 +797,108 @@ method draw(module: AmplifierModule, index: int): void {.inline.} =
     igEndTabBar()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: AbsoluterModule, index: int): void {.inline.} =
+method draw(module: AbsoluterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Absoluter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Absoluter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: RectifierModule, index: int): void {.inline.} =
+method draw(module: RectifierModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Rectifier", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Rectifier", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: InverterModule, index: int): void {.inline.} =
+method draw(module: InverterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Inverter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Inverter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: ClipperModule, index: int): void {.inline.} =
+method draw(module: ClipperModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Clipper", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Clipper", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderFloat("Max.", module.clipMax.addr, -4.0f, 4.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Clipper Max value")
     if(igSliderFloat("Min.", module.clipMin.addr, -4.0f, 4.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Clipper Min value")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: PdModule, index: int): void {.inline.} =
+method draw(module: PdModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Phase Dist.", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Phase Dist.", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("X Dist.", module.xEnvelope.peak.addr, 0.0f, 1.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit PD X distortion")
         if(igSliderFloat("Y Dist.", module.yEnvelope.peak.addr, 0.0f, 1.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit PD Y distortion")
         if(igCheckbox("Use ADSR on X", module.useAdsrX.addr)):
             synthesize()
+            registerHistoryEvent("PD use ADSR on X" & (if(module.useAdsrX): "checked" else: "unchecked"))
         if(igCheckbox("Use ADSR on Y", module.useAdsrY.addr)):
             synthesize()
+            registerHistoryEvent("PD use ADSR on Y" & (if(module.useAdsrY): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsrX):
         if(igBeginTabItem("ADSR Dist. X")):
@@ -834,26 +912,29 @@ method draw(module: PdModule, index: int): void {.inline.} =
     
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SyncModule, index: int): void {.inline.} =
+method draw(module: SyncModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Sync", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Sync", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()    
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Sync.", module.envelope.peak.addr, 0.0f, 16.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Sync")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Sync use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -865,27 +946,30 @@ method draw(module: SyncModule, index: int): void {.inline.} =
     
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: MorphModule, index: int): void {.inline.} =
+method draw(module: MorphModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Morpher", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Morpher", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Morph.", module.envelope.peak.addr, 0.0f, 1.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Morph")
         igEndTabItem()
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Morph use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
             module.envelope.addr.drawEnvelope(1)
@@ -893,169 +977,184 @@ method draw(module: MorphModule, index: int): void {.inline.} =
     igEndTabBar()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: ExpModule, index: int): void {.inline.} =
+method draw(module: ExpModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Exponenter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Exponenter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderFloat("Exp.", module.exponent.addr, 0.0f, 15.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Exp.")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: MultModule, index: int): void {.inline.} =
+method draw(module: MultModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Multiplier", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Multiplier", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: DualWaveModule, index: int): void {.inline.} =
+method draw(module: DualWaveModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Dual Wave", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Dual Wave", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: PhaseModule, index: int): void {.inline.} =
+method draw(module: PhaseModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Phase", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Phase", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderFloat("Phase", module.phase.addr, 0.0f, 1.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Phase")
     if(igSliderInt("Detune", module.detune.addr, -32, 32)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Detune")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: WaveFoldModule, index: int): void {.inline.} =
+method draw(module: WaveFoldModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Wave Folding", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Wave Folding", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: WaveMirrorModule, index: int): void {.inline.} =
+method draw(module: WaveMirrorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Wave Mirroring", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Wave Mirroring", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderFloat("Mirror", module.mirrorPlace.addr, 0.0f, 1.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Mirror position")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: DcOffsetModule, index: int): void {.inline.} =
+method draw(module: DcOffsetModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("DC Offset", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("DC Offset", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderFloat("Offset", module.offset.addr, -4.0f, 4.0f)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit DC offset")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: ChordModule, index: int): void {.inline.} =
+method draw(module: ChordModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Chord", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Chord", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igBeginChild("a")
     for i in 0..<module.mults.len:
         if(igSliderInt(("Mul " & $(i + 1)).cstring, module.mults[i].addr, 0, 32)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chord")
     igEndChild()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: FeedbackModule, index: int): void {.inline.} =
+method draw(module: FeedbackModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("FM Feedback", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("FM Feedback", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Feedback", module.fbEnvelope.peak.addr, 0.0f, 4.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Feedback")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Feedback use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -1064,26 +1163,29 @@ method draw(module: FeedbackModule, index: int): void {.inline.} =
     igEndTabBar()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: FastFeedbackModule, index: int): void {.inline.} =
+method draw(module: FastFeedbackModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Fast FM Feedback", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Fast FM Feedback", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Feedback", module.fbEnvelope.peak.addr, 0.0f, 4.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast FB")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Fast FB use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -1092,27 +1194,30 @@ method draw(module: FastFeedbackModule, index: int): void {.inline.} =
     igEndTabBar()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: DownsamplerModule, index: int): void {.inline.} =
+method draw(module: DownsamplerModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Downsample", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Downsample", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
 
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Downsample", module.downsampleEnvelope.peak.addr, 0.0f, 1.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Downsample")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Downsample use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -1122,27 +1227,30 @@ method draw(module: DownsamplerModule, index: int): void {.inline.} =
     
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: QuantizerModule, index: int): void {.inline.} =
+method draw(module: QuantizerModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Quantizer", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Quantizer", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
 
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderFloat("Quant.", module.quantizationEnvelope.peak.addr, 0.0f, 1.0f)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Quantizer")
         if(igCheckbox("Use ADSR", module.useAdsr.addr)):
             synthesize()
+            registerHistoryEvent("Quantizer use ADSR " & (if(module.useAdsr): "checked" else: "unchecked"))
         igEndTabItem()
     if(module.useAdsr):
         if(igBeginTabItem("ADSR")):
@@ -1152,131 +1260,141 @@ method draw(module: QuantizerModule, index: int): void {.inline.} =
 
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: OutputModule, index: int): void {.inline.} =
+method draw(module: OutputModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Output", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Output", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscopeOut(index)
+    module.drawOscilloscopeOut(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 const lfoWaves: array[5, cstring] = ["Sine".cstring, "Triangle", "Saw", "Square", "Custom"]
 const lfoModes: array[2, cstring] = ["Vibrato", "Tremollo"]
-method draw(module: LfoModule, index: int): void {.inline.} =
+method draw(module: LfoModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("LFO", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("LFO", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("type", module.lfoType.addr, 0, 4, format = lfoWaves[module.lfoType])):
         module.lfoType = clamp(module.lfoType, 0, lfoWaves.len - 1)
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit LFO Type")
     if(igSliderInt("mode", module.lfoMode.addr, 0, 1, format = lfoModes[module.lfoMode])):
         module.lfoMode = clamp(module.lfoMode, 0, lfoModes.len - 1)
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit LFO Mode")
     if(igSliderFloat("Intensity", module.intensity.addr, 0, 4)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit LFO Intensity")
     if(igSliderInt("Frequency", module.frequency.addr, 0, 16)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit LFO Frequency")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SoftClipModule, index: int): void {.inline.} =
+method draw(module: SoftClipModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Soft Clip", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Soft Clip", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 const foldTypes: array[3, cstring] = ["Sine".cstring, "LinFold", "Wrap"]
-method draw(module: WaveFolderModule, index: int): void {.inline.} =
+method draw(module: WaveFolderModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Wave Folder", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Wave Folder", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Type", module.waveFoldType.addr, 0, 2, format = foldTypes[module.waveFoldType])):
         module.waveFoldType = clamp(module.waveFoldType, 0, foldTypes.len - 1)
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Wavefolder type")
     # igText(foldTypes[module.waveFoldType])
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: SplitterModule, index: int): void {.inline.} =
+method draw(module: SplitterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Splitter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Splitter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: NormalizerModule, index: int): void {.inline.} =
+method draw(module: NormalizerModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Normalizer", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Normalizer", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 const filterTypes: array[5, cstring] = ["Lowpass".cstring, "Highpass", "Bandpass", "Bandstop", "Allpass"]
-method draw(module: BqFilterModule, index: int): void {.inline.} =
+method draw(module: BqFilterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Biquad Filter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Biquad Filter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     
@@ -1285,23 +1403,34 @@ method draw(module: BqFilterModule, index: int): void {.inline.} =
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
         igBeginChild("child")
-        module.drawOscilloscope(index)
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderInt("Type", module.filterType.addr, 0, filterTypes.len - 1, format = filterTypes[module.filterType])):
             module.filterType = clamp(module.filterType, 0, filterTypes.len - 1)
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Biquad Type")
         if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Biquad Cutoff")
         if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Biquad Resonance")
         if(igSliderInt("Pitch", module.note.addr, 0, 96)):
             synthesize()
-        if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Biquad Pitch")
+        if(igCheckbox("Use Cutoff ADSR ", module.useCutoffEnvelope.addr)):
             synthesize()
-        if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
+            registerHistoryEvent("Biquad use ADSR on Cutoff" & (if(module.useCutoffEnvelope): "checked" else: "unchecked"))
+        if(igCheckbox("Use Resonance ADSR ", module.useQEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Biquad use ADSR on Resonance" & (if(module.useQEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Normalize", module.normalize.addr)):
             synthesize()
+            registerHistoryEvent("Biquad Normalize " & (if(module.normalize): "checked" else: "unchecked"))
         igEndChild()
         igEndTabItem()
     if(module.useCutoffEnvelope):
@@ -1318,17 +1447,17 @@ method draw(module: BqFilterModule, index: int): void {.inline.} =
     # igText(foldTypes[module.waveFoldType])
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: FastBqFilterModule, index: int): void {.inline.} =
+method draw(module: FastBqFilterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Fast Biquad Filter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Fast Biquad Filter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     
@@ -1337,23 +1466,34 @@ method draw(module: FastBqFilterModule, index: int): void {.inline.} =
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
         igBeginChild("child")
-        module.drawOscilloscope(index)
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderInt("Type", module.filterType.addr, 0, filterTypes.len - 1, format = filterTypes[module.filterType])):
             module.filterType = clamp(module.filterType, 0, filterTypes.len - 1)
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast BQ Type")
         if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast BQ Cutoff")
         if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast BQ Resonance")
         if(igSliderInt("Pitch", module.note.addr, 0, 96)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast BQ Pitch")
         if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Fast BQ use ADSR on Cutoff " & (if(module.useCutoffEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Fast BQ use ADSR on Resonance " & (if(module.useQEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Normalize", module.normalize.addr)):
             synthesize()
+            registerHistoryEvent("Fast BQ Normalize " & (if(module.normalize): "checked" else: "unchecked"))
         igEndChild()
         igEndTabItem()
     if(module.useCutoffEnvelope):
@@ -1370,19 +1510,19 @@ method draw(module: FastBqFilterModule, index: int): void {.inline.} =
     # igText(foldTypes[module.waveFoldType])
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 
 const chFilterTypes: array[2, cstring] = ["Lowpass".cstring, "Highpass"]
-method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
+method draw(module: ChebyshevFilterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Chebyshev Filter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Chebyshev Filter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     
@@ -1391,25 +1531,38 @@ method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
         igBeginChild("child")
-        module.drawOscilloscope(index)
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderInt("Type", module.filterType.addr, 0, chFilterTypes.len - 1, format = chFilterTypes[module.filterType])):
             module.filterType = clamp(module.filterType, 0, chFilterTypes.len - 1)
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chebyshev Type")
         if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chebyshev Cutoff")
         if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chebyshev Resonance")
         if(igSliderInt("Pitch", module.note.addr, 0, 96)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chebyshev Pitch")
         if(igSliderInt("Order", module.order.addr, 0, 32)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Chebyshev Order")
         if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Chebyshev use ADSR on Cutoff" & (if(module.useCutoffEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Chebyshev use ADSR on Resonance" & (if(module.useQEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Normalize", module.normalize.addr)):
             synthesize()
+            registerHistoryEvent("Chebyshev Normalize" & (if(module.normalize): "checked" else: "unchecked"))
         igEndChild()
         igEndTabItem()
     if(module.useCutoffEnvelope):
@@ -1426,17 +1579,17 @@ method draw(module: ChebyshevFilterModule, index: int): void {.inline.} =
     # igText(foldTypes[module.waveFoldType])
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: FastChebyshevFilterModule, index: int): void {.inline.} =
+method draw(module: FastChebyshevFilterModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Fast Chebyshev Filter", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Fast Chebyshev Filter", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
     
@@ -1445,25 +1598,38 @@ method draw(module: FastChebyshevFilterModule, index: int): void {.inline.} =
     igBeginTabBar("tabs")
     if(igBeginTabItem("General")):
         igBeginChild("child")
-        module.drawOscilloscope(index)
-        module.drawOscilloscope(index)
+        module.drawOscilloscope(index, moduleList)
+        module.drawOscilloscope(index, moduleList)
         if(igSliderInt("Type", module.filterType.addr, 0, chFilterTypes.len - 1, format = chFilterTypes[module.filterType])):
             module.filterType = clamp(module.filterType, 0, chFilterTypes.len - 1)
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast CH. Type")
         if(igSliderFloat("Cutoff", module.cutoffEnvelope.peak.addr, 0, 1)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast CH. Cutoff")
         if(igSliderFloat("Resonance", module.qEnvelope.peak.addr, 0, 4)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast CH. Resonance")
         if(igSliderInt("Pitch", module.note.addr, 0, 96)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast CH. Pitch")
         if(igSliderInt("Order", module.order.addr, 0, 32)):
             synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Fast CH. Order")
         if(igCheckbox("Use Cutoff ADSR", module.useCutoffEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Fast CH. use ADSR on Cutoff" & (if(module.useCutoffEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Use Resonance ADSR", module.useQEnvelope.addr)):
             synthesize()
+            registerHistoryEvent("Fast CH. use ADSR on Resonance" & (if(module.useQEnvelope): "checked" else: "unchecked"))
         if(igCheckbox("Normalize", module.normalize.addr)):
             synthesize()
+            registerHistoryEvent("Fast CH. Normalize" & (if(module.normalize): "checked" else: "unchecked"))
         igEndChild()
         igEndTabItem()
     if(module.useCutoffEnvelope):
@@ -1480,61 +1646,65 @@ method draw(module: FastChebyshevFilterModule, index: int): void {.inline.} =
     # igText(foldTypes[module.waveFoldType])
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: UnisonModule, index: int): void {.inline.} =
+method draw(module: UnisonModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Unison", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Unison", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Unison", module.unison.addr, 0, 8)):
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Unison")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 const noiseTypes: array[3, cstring] = ["LSFR 1-Bit".cstring, "LSFR 8-Bits", "Random"]
-method draw(module: NoiseOscillatorModule, index: int): void {.inline.} =
+method draw(module: NoiseOscillatorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Noise", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Noise", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     if(igSliderInt("Mode", module.noiseMode.addr, 0, 2, format = noiseTypes[module.noiseMode])):
         module.noiseMode = clamp(module.noiseMode, 0, noiseTypes.len - 1)
         synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Noise Mode")
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
-method draw(module: QuadWaveAssemblerModule, index: int): void {.inline.} =
+method draw(module: QuadWaveAssemblerModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Quad Wave Assembler", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Quad Wave Assembler", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
@@ -1555,22 +1725,22 @@ proc `+`(vec1, vec2: ImVec2): ImVec2 =
 
 var scrollPoint = ImVec2()
 
-proc drawModuleBox*(boxModule: BoxModule, index: int): void {.inline.} =
+proc drawModuleBox*(boxModule: BoxModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     let module = boxModule.moduleList[index]
     if(module == nil): return
 
-    module.draw(index)
+    module.draw(index, boxModule.moduleList)
 
-method draw(module: BoxModule, index: int): void {.inline.} =
+method draw(module: BoxModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
-    drawTitleBar("Box", index, COLOR_OSCILLATOR.uint32)
+    drawTitleBar("Box", index, COLOR_OSCILLATOR.uint32, moduleList)
     igColumns(3, nil, border = false)
     igSetColumnOffset(0, 0)
-    drawInputs(module, index)
+    drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index)
+    module.drawOscilloscope(index, moduleList)
 
     var str = ($module.name)
     str.setLen(256)
@@ -1580,38 +1750,37 @@ method draw(module: BoxModule, index: int): void {.inline.} =
 
     let winName = "Edit Box : " & module.name
     if(igButton("Edit")):
-        igOpenPopup(winName.cstring)
+        igOpenPopup(winName.cstring, ImGuiPopupFlags.AnyPopupLevel)
             
-    
         # igPushStyleVar(ImGuiStyleVar.ChildBorderSize, 1)
-    if(igBeginPopupModal(winName.cstring, nil)):
+    if(igBegin(winName.cstring, nil)):
         var size: ImVec2
         igGetWindowSizeNonUDT(size.addr)
         if(size.x < 512):
             igSetWindowSize(winName.cstring, ImVec2(x: 512, y: size.y))
         if(size.y < 512):
             igSetWindowSize(winName.cstring, ImVec2(x: size.x, y: 512))
-
         if(igButton("Close")):
             igCloseCurrentPopup()
         
-        if(igBeginTable("table", 8, (ImGuiTableFlags.SizingFixedSame.int or ImGuiTableFlags.ScrollX.int or ImGuiTableFlags.ScrollY.int).ImGuiTableFlags)):
+        if(igBeginTable("tableBox", 16, (ImGuiTableFlags.SizingFixedSame.int or ImGuiTableFlags.ScrollX.int or ImGuiTableFlags.ScrollY.int).ImGuiTableFlags)):
             for i in 0..<16:
                 igTableNextRow()
                 for j in 0..<16:
                     igTableNextColumn()
-                    let index = i * 16 + j
+                    let bIndex = i * 16 + j
                     
-                    igBeginChild(($index).cstring, ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
-                    module.drawModuleBox(index)
-
+                    igBeginChild(($bIndex).cstring, ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
+                    module.drawModuleBox(bIndex, module.moduleList)
                     # igButton(("x:" & $j & " y:" & $i).cstring, ImVec2(x: 256, y: 256))
                     igEndChild()
+                    drawModuleCreationContextMenuBox(bIndex, module.moduleList, module.outputIndex, module)
                     # drawModuleCreationContextMenu(index)
                     continue
             scrollPoint.x = igGetScrollX()
             scrollPoint.y = igGetScrollY()
             igEndTable()
+        
     
         # Drawing links
         var dl = igGetWindowDrawList()
@@ -1619,8 +1788,8 @@ method draw(module: BoxModule, index: int): void {.inline.} =
         igGetWindowPosNonUDT(winPos.addr)
         for i in 0..<16:
             for j in 0..<16:
-                let index = i * 16 + j
-                let module = module.moduleList[index]
+                let bIndex = i * 16 + j
+                let module = module.moduleList[bIndex]
                 if(module == nil): continue
                 # echo("x : " & $j & " y: " & $i)
                 for x in 0..<module.outputs.len():
@@ -1656,22 +1825,22 @@ method draw(module: BoxModule, index: int): void {.inline.} =
             if(igIsMouseDoubleClicked(ImGuiMouseButton.Left)):
                 selectedLink.moduleIndex = -1
                 selectedLink.pinIndex = -1
-        igEndPopup()
+        igEnd()
     # if(igSliderInt("Unison", module.unison.addr, 0, 8)):
         # synthesize()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
-    drawOutputs(module, index)
+    drawOutputs(module, index, moduleList)
     igEndColumns()
     return
 
 
 
-proc drawModule*(index: int): void {.inline.} =
+proc drawModule*(index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     let module = synthContext.moduleList[index]
     if(module == nil): return
 
-    module.draw(index)
+    module.draw(index, moduleList)
 
     
     # echo typeof(module)

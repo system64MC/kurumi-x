@@ -18,14 +18,14 @@ proc constructMixerModule*(): MixerModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: MixerModule, x: float64, pin: int): float64 =
+method synthesize(module: MixerModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     var output = 0.0
 
     for link in module.inputs:
         if(link.moduleIndex > -1):
-            let module = synthContext.moduleList[link.moduleIndex]
+            let module = moduleList[link.moduleIndex]
             if(module == nil): continue
-            output += module.synthesize(x, link.pinIndex)
+            output += module.synthesize(x, link.pinIndex, moduleList)
 
     return output
 

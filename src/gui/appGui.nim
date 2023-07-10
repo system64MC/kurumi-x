@@ -7,6 +7,7 @@ import moduleDraw
 import ../synthesizer/exportFile
 import ../synthesizer/globals
 import std/os
+import history
 
 let demo = true
 
@@ -19,6 +20,16 @@ proc drawApp*(): void {.inline.} =
     igOpenGL3NewFrame()
     igGlfwNewFrame()
     igNewFrame()
+    let canUndo = (history.history.historyPointer > 0)
+    let canRedo = (history.history.historyPointer < history.history.historyStack.len() - 1)
+    if(
+        (igGetIO().keyCtrl and igIsKeyPressed(igGetKeyIndex(ImGuiKey.Z))) xor
+        (igGetIO().keyCtrl and igIsKeyPressed(87))
+        ):
+        if(canUndo): undo()
+
+    if(igGetIO().keyCtrl and igIsKeyPressed(igGetKeyIndex(ImGuiKey.Y))):
+        if(canRedo): redo()
 
     igShowDemoWindow(demo.addr)
     if(igBeginMainMenuBar()):
@@ -51,9 +62,20 @@ proc drawApp*(): void {.inline.} =
                 igEndMenu()
 
             igEndMenu()
+        if(igBeginMenu("Action")):
+            if(igMenuItem("Undo", shortcut = "CTRL + Z", enabled = canUndo)):
+                undo()
+            if(igMenuItem("Redo", shortcut = "CTRL + Y", enabled = canRedo)):
+                redo()
+            if(igBeginMenu("History")):
+                for i in countdown((history.history.historyStack.len() - 1), 0):
+                    if(igMenuItem((history.history.historyStack[i].eventName & "##" & $i).cstring)):
+                        restoreToHistoryIndex(i)
+                igEndMenu()
+            igEndMenu()
         igEndMainMenuBar()
     
-    if(igBegin("Test", nil)):
+    if(igBegin("Main Rack", nil)):
         drawGrid()
     igEnd()
 

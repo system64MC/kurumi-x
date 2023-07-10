@@ -18,21 +18,21 @@ proc constructDualWaveModule*(): DualWaveModule =
 proc moduloFix(a, b: float64): float64 =
     return ((a mod b) + b) mod b
 
-method synthesize*(module: DualWaveModule, x: float64, pin: int): float64 =
+method synthesize*(module: DualWaveModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     var moduleA: SynthModule = nil
     var moduleB: SynthModule = nil
 
     if(module.inputs[0].moduleIndex > -1):
-        moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+        moduleA = moduleList[module.inputs[0].moduleIndex]
     if(module.inputs[1].moduleIndex > -1):
-        moduleB = synthContext.moduleList[module.inputs[1].moduleIndex]
+        moduleB = moduleList[module.inputs[1].moduleIndex]
     
     if(moduleA == nil and moduleB == nil): return 0
     let x2 = moduloFix(x * 2, 2 * PI)
     if(x < PI):
-        return if(moduleA != nil): moduleA.synthesize(x2, module.inputs[0].pinIndex) else: 0.0
+        return if(moduleA != nil): moduleA.synthesize(x2, module.inputs[0].pinIndex, moduleList) else: 0.0
     else:
-        return if(moduleB != nil): moduleB.synthesize(x2, module.inputs[1].pinIndex) else: 0.0
+        return if(moduleB != nil): moduleB.synthesize(x2, module.inputs[1].pinIndex, moduleList) else: 0.0
 
 import ../serializationObject
 import flatty

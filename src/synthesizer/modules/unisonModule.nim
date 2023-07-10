@@ -21,19 +21,19 @@ proc getPhase(unisonLevel: float64): float64 =
     if(macLen < 2): macLen = 2
     return mac.float64 / (macLen - 1) * detune
 
-method synthesize*(module: UnisonModule, x: float64, pin: int): float64 =
+method synthesize*(module: UnisonModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0.0
     else:
         if(module.unison < 1):
-            return moduleA.synthesize(x, module.inputs[0].pinIndex)
+            return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList)
         var sum = 0.0
         var divider = 0.0
         for i in 0..module.unison:
             divider += 1.0
-            sum += moduleA.synthesize(moduloFix(x + getPhase(i.float64) * PI * 2, 2 * PI), module.inputs[0].pinIndex)
+            sum += moduleA.synthesize(moduloFix(x + getPhase(i.float64) * PI * 2, 2 * PI), module.inputs[0].pinIndex, moduleList)
 
         return sum / divider
 

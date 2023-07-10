@@ -7,7 +7,7 @@ type
         outputs* : seq[Link]
         update*: bool = true
 
-method synthesize*(module: SynthModule, x: float64, pin: int): float64 {.base.} =
+method synthesize*(module: SynthModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 {.base.} =
     return x
 
 method serialize*(module: SynthModule): ModuleSerializationObject {.base.} =

@@ -123,9 +123,9 @@ proc processBqFilter*(module: FastBqFilterModule, x: float64): float64 =
     module.filter.z2 = x * module.filter.a2 - module.filter.b2 * output
     return output
 
-method synthesize*(module: FastBqFilterModule, x: float64, pin: int): float64 =
+method synthesize*(module: FastBqFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
 
     if(module.update):
         let sampleRate = notetofreq(module.note.float64) * (synthContext.waveDims.x * synthContext.oversample).float64
@@ -144,12 +144,12 @@ method synthesize*(module: FastBqFilterModule, x: float64, pin: int): float64 =
             for a in 0..<11:
                 for i in 0..<(synthContext.waveDims.x * synthContext.oversample).int:
                     let ratio = i.float64 / (synthContext.waveDims.x * synthContext.oversample).float64
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
                     discard module.processBqFilter(val)
 
             for i in 0..<(synthContext.waveDims.x * synthContext.oversample).int:
                     let ratio = i.float64 / (synthContext.waveDims.x * synthContext.oversample).float64
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
                     let res = module.processBqFilter(val)
                     module.buffer[i] = res
                     module.max = max(module.max, res)

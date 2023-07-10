@@ -6,6 +6,7 @@ import ../synthesizer/modules/outputModule
 import ../synthesizer/synthesizeWave
 import ../synthesizer/serialization
 import std/random
+import ../gui/history
 
 const vampires = [
     "Flandre Scarlet",
@@ -37,6 +38,8 @@ proc boot*(): void =
     doAssert glInit()
 
     let context = igCreateContext()
+    var io = igGetIO()
+    io.configFlags = (io.configFlags.int or ImGuiConfigFlags.NavEnableKeyboard.int).ImGuiConfigFlags
     #let io = igGetIO()
 
     doAssert igGlfwInitForOpenGL(window, true)
@@ -44,6 +47,8 @@ proc boot*(): void =
 
     echo "hi"
     loadState()
+    history.history = History(historyPointer: 0, historyStack: @[HistoryEvent(eventName: "start", synthState: saveStateHistory())])
+    # context.
 
     while not window.windowShouldClose:
         drawApp()

@@ -13,6 +13,7 @@ bin           = @["kurumiX"]
 requires "nim >= 1.9.3"
 requires "nimgl"
 requires "https://github.com/nimgl/imgui.git"
+# requires "https://github.com/daniel-j/nimgl-imgui.git"
 requires "flatty"
 requires "supersnappy"
 requires "tinydialogs"

@@ -102,9 +102,9 @@ proc processChebyshevFilter*(module: ChebyshevFilterModule, x: float64): float64
             module.filter.w1[i] = module.filter.w0[i]
     return x
 
-method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64 =
+method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
 
     if(module.update):
         let sampleRate = notetofreq(module.note.float64) * LENGTH
@@ -120,15 +120,15 @@ method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int): float64
                 module.buffer[i] = 0
         else:
             # Preheat
-            for a in 0..<64:
+            for a in 0..<11:
                 for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
                     discard module.processChebyshevFilter(val)
 
             for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
                     let res = module.processChebyshevFilter(val)
                     module.buffer[i] = res
                     module.max = max(module.max, res)

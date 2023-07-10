@@ -22,7 +22,7 @@
 #     return ((a mod b) + b) mod b
 # method synthesize(module: FeedbackModule, x: float64): float64 =
 #     if(module.inputs[0].moduleIndex < 0): return 0
-#     let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+#     let moduleA = moduleList[module.inputs[0].moduleIndex]
 
 #     var x1 = 0.0
 #     var res = 0.0
@@ -75,7 +75,7 @@ proc constructFastFeedbackModule*(): FastFeedbackModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: FastFeedbackModule, x: float64, pin: int): float64 =
+method synthesize(module: FastFeedbackModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     # if(module.inputs[0].moduleIndex < 0): 
     #     module.prev = 0
     #     module.curr = 0
@@ -89,7 +89,7 @@ method synthesize(module: FastFeedbackModule, x: float64, pin: int): float64 =
                 module.curr = 0
                 module.buffer[i] = 0
             return 0
-        let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+        let moduleA = moduleList[module.inputs[0].moduleIndex]
         if(moduleA == nil):
             for i in 0..<synthContext.waveDims.x * synthContext.oversample:
                 module.prev = 0
@@ -102,14 +102,14 @@ method synthesize(module: FastFeedbackModule, x: float64, pin: int): float64 =
             var output = 0.0
             for i in 0..<l:
                 let x1 = (i.float64 * PI * 2) / l.float64
-                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin)
+                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList)
                 # echo x
                 module.buffer[i] = output
                 module.prev = module.curr
                 module.curr = output
             for i in 0..<l:
                 let x1 = (i.float64 * PI * 2) / l.float64
-                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin)
+                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList)
                 # echo x
                 module.buffer[i] = output
                 module.prev = module.curr

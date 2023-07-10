@@ -1,15 +1,26 @@
 import globals
 import modules/outputModule
+import modules/boxModule
+import modules/module
 import math
 import strutils
 # import kissfft/kissfft
 import fourierTransform
 
-proc synthesize*(): void =
-
-    for m in synthContext.moduleList:
+proc update(moduleList: array[256, SynthModule]): void =
+    for m in moduleList:
         if(m == nil): continue
         m.update = true
+        if(m of BoxModule):
+            echo "Updating Box"
+            update((m.BoxModule).moduleList)
+proc synthesize*(): void =
+
+    # for m in synthContext.moduleList:
+    #     if(m == nil): continue
+    #     m.update = true
+
+    update(synthContext.moduleList)
 
     let outModule = synthContext.moduleList[synthContext.outputIndex].OutputModule
     echo outModule.inputs[0].pinIndex
@@ -20,7 +31,7 @@ proc synthesize*(): void =
         var sum = 0.0
         var j = 0.0
         while(j < 1):
-            sum += outModule.synthesize((i.float64 + j) * PI * 2 / synthContext.waveDims.x.float64, outModule.inputs[0].pinIndex) * overSampleValue
+            sum += outModule.synthesize((i.float64 + j) * PI * 2 / synthContext.waveDims.x.float64, outModule.inputs[0].pinIndex, synthContext.moduleList) * overSampleValue
             j += overSampleValue
         outputFloat[i] = sum
 

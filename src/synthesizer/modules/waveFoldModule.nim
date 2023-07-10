@@ -13,13 +13,13 @@ proc constructWaveFoldModule*(): WaveFoldModule =
     return module
 
 
-method synthesize*(module: WaveFoldModule, x: float64, pin: int): float64 =
+method synthesize*(module: WaveFoldModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0.0
     else:
-        let output = moduleA.synthesize(moduloFix(x * 2, 2 * PI), module.inputs[0].pinIndex)
+        let output = moduleA.synthesize(moduloFix(x * 2, 2 * PI), module.inputs[0].pinIndex, moduleList)
         if(x < PI): return output else: return -output
 
 import ../serializationObject

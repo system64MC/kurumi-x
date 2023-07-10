@@ -42,10 +42,10 @@ proc waveFolding(x: float64, waveFoldType: int32): float64 =
     elif(waveFoldType == 2):
         return overFlow(x)
 
-method synthesize*(module: WaveFolderModule, x: float64, pin: int): float64 =
+method synthesize*(module: WaveFolderModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
-    if(moduleA == nil): return 0.0 else: return waveFolding(moduleA.synthesize(x, module.inputs[0].pinIndex), module.waveFoldType)
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
+    if(moduleA == nil): return 0.0 else: return waveFolding(moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList), module.waveFoldType)
 
 import ../serializationObject
 import flatty

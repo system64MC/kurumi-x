@@ -5,6 +5,12 @@ import moduleDraw
 import ../synthesizer/synth
 import ../synthesizer/globals
 import ../synthesizer/utils/utils
+import ../synthesizer/modules/outputModule
+import ../synthesizer/modules/module
+import ../synthesizer/serialization
+import ../synthesizer/linkManagement
+import ../synthesizer/synthesizeWave
+import history
 
 const
     WIN_PAD = 8.0f
@@ -32,11 +38,14 @@ proc drawGrid*(): void {.inline.} =
                 let index = i * GRID_SIZE_X + j
                 
                 igBeginChild(($index).cstring, ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
-                drawModule(index)
+                drawModule(index, synthContext.moduleList)
 
                 # igButton(("x:" & $j & " y:" & $i).cstring, ImVec2(x: 256, y: 256))
                 igEndChild()
-                drawModuleCreationContextMenu(index)
+                drawModuleCreationContextMenu(index, synthContext.moduleList, synthContext.outputIndex)
+                # Copy paste features
+                if(igIsItemHovered()):
+                    copyPasteOps(index, synthContext.moduleList, synthContext.outputIndex)
                 continue
         scrollPoint.x = igGetScrollX()
         scrollPoint.y = igGetScrollY()

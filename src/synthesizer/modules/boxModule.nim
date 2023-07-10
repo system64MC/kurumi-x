@@ -26,15 +26,15 @@ proc constructBoxModule*(): BoxModule =
         Link(moduleIndex: -1, pinIndex: -1)
     ]
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
-    module.moduleList[7] = OutputModule()
+    module.moduleList[7] = constructOutputModule()
     return module
 
-method synthesize(module: BoxModule, x: float64, pin: int): float64 =
+method synthesize(module: BoxModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
 
     let outModule = module.moduleList[module.outputIndex].OutputModule
     # echo outModule.inputs[0].pinIndex
 
-    return 0
+    return outModule.synthesize(x, outModule.inputs[0].pinIndex, module.moduleList)
     # let val = outModule.synthesize(x, outModule.inputs[0].pinIndex)
 
 import ../serializationObject

@@ -16,9 +16,9 @@ proc constructNormalizerModule*(): NormalizerModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: NormalizerModule, x: float64, pin: int): float64 =
+method synthesize*(module: NormalizerModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): return 0.0
     let step = (2 * PI)/(synthContext.oversample.float64 * synthContext.waveDims.x.float64)
     var x1 = 0.0
@@ -37,7 +37,7 @@ method synthesize*(module: NormalizerModule, x: float64, pin: int): float64 =
             module.max = 0
             module.min = 0
             while x1 < 2 * PI:
-                let res = moduleA.synthesize(x1, module.inputs[0].pinIndex)
+                let res = moduleA.synthesize(x1, module.inputs[0].pinIndex, moduleList)
                 if(res > module.max): module.max = res
                 if(res < module.min): module.min = res
                 x1 += step
@@ -48,7 +48,7 @@ method synthesize*(module: NormalizerModule, x: float64, pin: int): float64 =
 
     let norm = max(abs(module.max), abs(module.min))
 
-    return moduleA.synthesize(x, module.inputs[0].pinIndex) * (1 / norm)
+    return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList) * (1 / norm)
     # return moduleA.synthesize(x, module.inputs[0].pinIndex)
 
 import ../serializationObject
