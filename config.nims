@@ -36,5 +36,5 @@ else:
     --threads:off
     --d:nimDontSetUtf8CodePage
     --opt:speed
-    --passC:"-flto"
+    --passC:"-flto -ofast"
     --passL:"-flto -s"

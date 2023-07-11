@@ -1776,7 +1776,9 @@ method draw(module: BoxModule, index: int, moduleList: var array[256, SynthModul
                     igEndChild()
                     drawModuleCreationContextMenuBox(bIndex, module.moduleList, module.outputIndex, module)
                     # drawModuleCreationContextMenu(index)
-                    continue
+                    if(igIsItemHovered()):
+                        copyPasteOps(bIndex, module.moduleList, module.outputIndex)
+                continue
             scrollPoint.x = igGetScrollX()
             scrollPoint.y = igGetScrollY()
             igEndTable()

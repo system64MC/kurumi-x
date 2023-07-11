@@ -69,11 +69,12 @@ proc executeContextClick(index: int, actionId: int): void =
     return
 
 proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outIndex: uint16, boxModule: BoxModule = nil): void {.inline.} =
-    if(igGetIO().keyCtrl and igIsKeyPressed(igGetKeyIndex(ImGuiKey.C))):
+    if(igGetIO().keyCtrl and igGetIO().keyShift and igIsKeyPressed(igGetKeyIndex(ImGuiKey.C))):
         let module = moduleList[cellIndex]
         if not(module of OutputModule):
             if(module != nil): moduleClipboard = module.serialize()
-    if(igGetIO().keyCtrl and igIsKeyPressed(igGetKeyIndex(ImGuiKey.V)) and not(igGetIO().keyShift)):
+        return
+    if(igGetIO().keyCtrl and igGetIO().keyShift and igIsKeyPressed(igGetKeyIndex(ImGuiKey.V))):
         let module = synthContext.moduleList[cellIndex]
         if not(module of OutputModule):
             if(module != nil):
@@ -84,7 +85,8 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
             moduleList[cellIndex].resetLinks()
             synthesize()
             registerHistoryEvent("Paste Module")
-    if(igGetIO().keyCtrl and igIsKeyPressed(igGetKeyIndex(ImGuiKey.X))):
+        return
+    if(igGetIO().keyCtrl and igGetIO().keyShift and igIsKeyPressed(igGetKeyIndex(ImGuiKey.X))):
         let module = moduleList[cellIndex]
         if not(module of OutputModule):
             if(module != nil):
@@ -93,14 +95,16 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
                 deleteModule(cellIndex, moduleList)
                 synthesize()
                 registerHistoryEvent("Cut Module")
-    if(igGetIO().keyCtrl and igIsKeyPressed(68)):
+        return
+    if(igGetIO().keyAlt and igIsKeyPressed(68)):
         let module = moduleList[cellIndex]
         if not(module of OutputModule):
             if(module != nil):
                 deleteModule(cellIndex, moduleList)
                 synthesize()
                 registerHistoryEvent("Delete module")
-    if(igGetIO().keyCtrl and igGetIO().keyShift and igIsKeyPressed(igGetKeyIndex(ImGuiKey.V))):
+        return
+    if(igGetIO().keyAlt and igIsKeyPressed(igGetKeyIndex(ImGuiKey.V))):
         let module = moduleList[cellIndex]
         module.breakAllLinks(moduleList)
         moduleList[outIndex].breakAllLinks(moduleList)
@@ -112,6 +116,7 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
             boxModule.outputIndex = cellIndex.uint16
         synthesize()
         registerHistoryEvent("Moved Output")
+        return
 
 proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], outIndex: uint16, boxModule: BoxModule = nil): void {.inline.} =
     var oldModule = moduleList[cellIndex]
