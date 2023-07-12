@@ -21,7 +21,7 @@ const vampires = [
 proc boot*(): void =
     randomize()
     synthContext.moduleList[1] = constructOutputModule()
-    synthesize()
+    synthContext.synthesize()
     doAssert glfwInit()
 
     glfwWindowHint(GLFWContextVersionMajor, 3)
@@ -47,7 +47,7 @@ proc boot*(): void =
 
     echo "hi"
     loadState()
-    history.history = History(historyPointer: 0, historyStack: @[HistoryEvent(eventName: "start", synthState: saveStateHistory())])
+    history.history = History(historyPointer: 0, historyStack: @[HistoryEvent(eventName: "start", synthState: synthContext.saveStateHistory())])
     # context.
 
     while not window.windowShouldClose:

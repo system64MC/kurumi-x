@@ -1,7 +1,9 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
+import ../synthInfos
 
 type
     ChebyshevFilter = ref object
@@ -102,14 +104,14 @@ proc processChebyshevFilter*(module: ChebyshevFilterModule, x: float64): float64
             module.filter.w1[i] = module.filter.w0[i]
     return x
 
-method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
 
     if(module.update):
         let sampleRate = notetofreq(module.note.float64) * LENGTH
-        let mCutoff = if(module.useCutoffEnvelope): module.cutoffEnvelope.doAdsr() else: module.cutoffEnvelope.peak
-        let mResonance = if(module.useQEnvelope): module.qEnvelope.doAdsr() else: module.qEnvelope.peak
+        let mCutoff = if(module.useCutoffEnvelope): module.cutoffEnvelope.doAdsr(synthInfos.macroFrame) else: module.cutoffEnvelope.peak
+        let mResonance = if(module.useQEnvelope): module.qEnvelope.doAdsr(synthInfos.macroFrame) else: module.qEnvelope.peak
         var filterCutoff = 5 * pow(10, mCutoff * 3)
         filterCutoff = min(sampleRate/2, filterCutoff)
         module.setChebyshevFilter(filterCutoff, mResonance)
@@ -123,12 +125,12 @@ method synthesize*(module: ChebyshevFilterModule, x: float64, pin: int, moduleLi
             for a in 0..<11:
                 for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList, synthInfos)
                     discard module.processChebyshevFilter(val)
 
             for i in 0..<LENGTH.int:
                     let ratio = i.float64 / LENGTH
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList)
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList, synthInfos)
                     let res = module.processChebyshevFilter(val)
                     module.buffer[i] = res
                     module.max = max(module.max, res)

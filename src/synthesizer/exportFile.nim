@@ -6,6 +6,9 @@ import utils/utils
 import supersnappy
 import modules
 import serializationObject
+import serialization
+import print
+import strformat
 
 import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
 import nimgl/[opengl, glfw]
@@ -18,8 +21,8 @@ import os
 import math
 import browsers
 
-proc getSampleRate(): int =
-    return int(floor((440 * float64(synthContext.waveDims.x)) / 2.0))
+proc getSampleRate(synth: ref Synth): int =
+    return int(floor((440 * float64(synth.synthInfos.waveDims.x)) / 2.0))
 
 proc drawPopup(currFrame, maxFrame: int): void {.inline.} =
     igRender()
@@ -44,9 +47,11 @@ proc drawPopup(currFrame, maxFrame: int): void {.inline.} =
     window.swapBuffers()
     glfwSwapInterval(1)
 
-proc saveWav*(bits: int = 16, sequence: bool = false): void =
+proc saveWav*(data: string, bits: int = 16, sequence: bool = false): void {.gcsafe.} =
     let path = saveFileDialog("Export .WAV", getCurrentDir() / "\0", ["*.wav"], ".WAV files")
+    if(path == ""): return
 
+    var synth = loadStateHistory(data)
     # var seqFrame = 0
      
     let f = open(path, fmWrite)
@@ -54,21 +59,21 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
 
     var frames = 1
     if sequence:
-        frames = synthContext.macroLen
+        frames = synth.synthInfos.macroLen
 
     var chunkSize = 0
     if bits == 16:
-        chunkSize = 36 + (synthContext.waveDims.x * frames) * 2
+        chunkSize = 36 + (synth.synthInfos.waveDims.x * frames) * 2
     else:
-        chunkSize = 36 + (synthContext.waveDims.x * frames)
+        chunkSize = 36 + (synth.synthInfos.waveDims.x * frames)
 
     var subchunkSize = 0
     if bits == 16:
-        subchunkSize = (synthContext.waveDims.x * frames) * 2
+        subchunkSize = (synth.synthInfos.waveDims.x * frames) * 2
     else:
-        subchunkSize = (synthContext.waveDims.x * frames)
+        subchunkSize = (synth.synthInfos.waveDims.x * frames)
 
-    let sampleRate: int = getSampleRate()
+    let sampleRate: int = synth.getSampleRate()
     var byteRate = 0
     if bits == 16:
         byteRate = (sampleRate * 16) div 8
@@ -93,20 +98,20 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
     
     discard f.writeBytes(header, 0, header.len)
 
-    let wavDiv = synthContext.waveDims.y.float64 / 2.0
+    let wavDiv = synth.synthInfos.waveDims.y.float64 / 2.0
     let waveDiv05 = wavDiv + 0.5
 
     if(sequence):
         # igOpenPopup("Exporting sequence")
-        let tmpMac = synthContext.macroFrame
-        for i in 0..<synthContext.macroLen:
-            synthContext.macroFrame = i
+        let tmpMac = synth.synthInfos.macroFrame
+        for i in 0..<synth.synthInfos.macroLen:
+            synth.synthInfos.macroFrame = i
             # seqFrame = i
-            synthesize()
+            synth.synthesize()
 
-            for j in 0..<synthContext.waveDims.x:
-                var sample = outputInt[j].float64
-                if((synthContext.waveDims.y and 0x0001) == 1):
+            for j in 0..<synth.synthInfos.waveDims.x:
+                var sample = synth.outputInt[j].float64
+                if((synth.synthInfos.waveDims.y and 0x0001) == 1):
                     sample = sample / waveDiv05
                 else:
                     sample = sample / wavDiv
@@ -122,13 +127,14 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
                 discard f.writeBytes(@[myOut.byte], 0, 1)
             # drawPopup(seqFrame, synthContext.macroLen - 1)
 
-        synthContext.macroFrame = tmpMac
-        synthesize()
+        synth.synthInfos.macroFrame = tmpMac
+        synth.synthesize()
         # igCloseCurrentPopup()
     else:
-        for j in 0..<synthContext.waveDims.x:
-            var sample = outputInt[j].float64
-            if((synthContext.waveDims.y and 0x0001) == 1):
+        synth.synthesize()
+        for j in 0..<synth.synthInfos.waveDims.x:
+            var sample = synth.outputInt[j].float64
+            if((synth.synthInfos.waveDims.y and 0x0001) == 1):
                 sample = sample / waveDiv05
             else:
                 sample = sample / wavDiv
@@ -142,20 +148,23 @@ proc saveWav*(bits: int = 16, sequence: bool = false): void =
 
             let myOut = (round((sample) * ((1 shl (8 - 1))).float64)).int16
             discard f.writeBytes(@[myOut.byte], 0, 1)
-    notifyPopup("Kurumi-X", "WAV file " & path.splitFile().name & " exported!", IconType.Info)
+    # notifyPopup("Kurumi-X", "WAV file " & path.splitFile().name & " exported!", IconType.Info)
+    discard messageBox("Kurumi-X", fmt"{path.splitFile().name}.wav is exported with success!", DialogType.Ok, IconType.Info, Button.Yes)
 
-proc saveN163*(sequence: bool): void =
-    let tmpLen = synthContext.waveDims.x
-    let tmpHei = synthContext.waveDims.y
+proc saveN163*(data: string, sequence: bool): void {.gcsafe.} =
+    let path = saveFileDialog("Export .FTI", getCurrentDir() / "\0", ["*.fti"], ".FTI files")
+    if(path == ""): return
+    
+    var synth = loadStateHistory(data)
+    let tmpLen = synth.synthInfos.waveDims.x
+    let tmpHei = synth.synthInfos.waveDims.y
 
     if(tmpLen > 240):
-        synthContext.waveDims.x = 240
+        synth.synthInfos.waveDims.x = 240
     if(tmpHei > 15):
-        synthContext.waveDims.y = 15
-    synthesize()
+        synth.synthInfos.waveDims.y = 15
+    synth.synthesize()
 
-    let path = saveFileDialog("Export .FTI", getCurrentDir() / "\0", ["*.fti"], ".FTI files")
-    
     var name = path.splitFile().name
 
     if name.len > 127:
@@ -189,7 +198,7 @@ proc saveN163*(sequence: bool): void =
     discard f.writeBytes(@[waveMacroEnabled], 0, 1)
 
     if(sequence):
-        let macLen = min(synthContext.macroLen, 64)
+        let macLen = min(synth.synthInfos.macroLen, 64)
         discard f.writeBytes(@[macLen.byte], 0, 1)
         
         discard f.writeBytes(@[0x00'u8], 0, 1)
@@ -213,7 +222,7 @@ proc saveN163*(sequence: bool): void =
         for i in 0..<macLen:
             discard f.writeBytes(@[i.byte], 0, 1)
 
-        discard f.writeBytes(@[synthContext.waveDims.x.byte], 0, 1)
+        discard f.writeBytes(@[synth.synthInfos.waveDims.x.byte], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
@@ -227,19 +236,19 @@ proc saveN163*(sequence: bool): void =
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         
-        let tmpMac = synthContext.macroFrame
+        let tmpMac = synth.synthInfos.macroFrame
         for m in 0..<macLen:
-            synthContext.macroFrame = m
-            synthesize()
+            synth.synthInfos.macroFrame = m
+            synth.synthesize()
 
-            for i in 0..<synthContext.waveDims.x:
-                let smp = outputInt[i]
+            for i in 0..<synth.synthInfos.waveDims.x:
+                let smp = synth.outputInt[i]
                 discard f.writeBytes(@[smp.byte], 0, 1)
 
-        synthContext.macroFrame = tmpMac
+        synth.synthInfos.macroFrame = tmpMac
 
     else:
-        discard f.writeBytes(@[synthContext.waveDims.x.byte], 0, 1)
+        discard f.writeBytes(@[synth.synthInfos.waveDims.x.byte], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
@@ -252,14 +261,15 @@ proc saveN163*(sequence: bool): void =
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
         discard f.writeBytes(@[0x00'u8], 0, 1)
-        for i in 0..<synthContext.waveDims.x:
+        for i in 0..<synth.synthInfos.waveDims.x:
                 let smp = outputInt[i]
                 discard f.writeBytes(@[smp.byte], 0, 1)
 
-    synthContext.waveDims.x = tmpLen
-    synthContext.waveDims.y = tmpHei
-    synthesize()
+    synth.synthInfos.waveDims.x = tmpLen
+    synth.synthInfos.waveDims.y = tmpHei
+    synth.synthesize()
     notifyPopup("Kurumi-X", "FTI instrument " & name & " exported!", IconType.Info)
+    discard messageBox("Kurumi-X", fmt"FTI instrument {path.splitFile().name}.fti is exported with success!", DialogType.Ok, IconType.Info, Button.Yes)
 
 const FURNACE_FORMAT_VER: uint16 = 143
 proc saveFUW*(): void =
@@ -268,7 +278,7 @@ proc saveFUW*(): void =
     let f = open(path, fmWrite)
     defer: f.close()
 
-    let size: uint32 = 1 + 4 + 4 + 4 + (4 * synthContext.waveDims.x).uint32
+    let size: uint32 = 1 + 4 + 4 + 4 + (4 * synthContext.synthInfos.waveDims.x).uint32
     const HEADER_SIZE = 16 + 2 + 2 + 4 + 4 + 1 + 4 + 4 + 4
 
     let header: seq[byte] = @[
@@ -278,14 +288,14 @@ proc saveFUW*(): void =
         'W'.byte, 'A'.byte, 'V'.byte, 'E'.byte, # WAVE chunk, 4 bytes
         byte(size and 0xFF), byte((size shr 8) and 0xFF), byte((size shr 16) and 0xFF), byte((size shr 24)), # Size of chunk, 4 bytes
         0, # empty string, 1 byte
-        byte(synthContext.waveDims.x and 0xFF), byte((synthContext.waveDims.x shr 8) and 0xFF), byte((synthContext.waveDims.x shr 16) and 0xFF), byte((synthContext.waveDims.x shr 24)), # Wave length, 4 bytes
+        byte(synthContext.synthInfos.waveDims.x and 0xFF), byte((synthContext.synthInfos.waveDims.x shr 8) and 0xFF), byte((synthContext.synthInfos.waveDims.x shr 16) and 0xFF), byte((synthContext.synthInfos.waveDims.x shr 24)), # Wave length, 4 bytes
         0, 0, 0, 0, # Reserved, 4 bytes
-        byte(synthContext.waveDims.y and 0xFF), byte((synthContext.waveDims.y shr 8) and 0xFF), byte((synthContext.waveDims.y shr 16) and 0xFF), byte((synthContext.waveDims.y shr 24)), # Wave height, 4 bytes
+        byte(synthContext.synthInfos.waveDims.y and 0xFF), byte((synthContext.synthInfos.waveDims.y shr 8) and 0xFF), byte((synthContext.synthInfos.waveDims.y shr 16) and 0xFF), byte((synthContext.synthInfos.waveDims.y shr 24)), # Wave height, 4 bytes
     ]
 
     discard f.writeBytes(header, 0, header.len)
 
-    for i in 0..<synthContext.waveDims.x:
+    for i in 0..<synthContext.synthInfos.waveDims.x:
         let smp = outputInt[i]
         discard f.writeBytes(@[(smp and 0xFF).byte], 0, 1)
         discard f.writeBytes(@[((smp shr 8) and 0xFF).byte], 0, 1)

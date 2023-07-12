@@ -44,7 +44,8 @@ type
         FAST_FEEDBACK,
         FAST_BQ_FILTER,
         FAST_CH_FILTER,
-        BOX
+        BOX,
+        AVG_FILTER
 
     ModuleSerializationObject* = object
         mType*: ModuleType

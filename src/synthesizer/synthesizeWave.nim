@@ -8,6 +8,7 @@ import print
 # import kissfft/kissfft
 import fourierTransform
 import resampling
+import synth
 
 proc update(moduleList: array[256, SynthModule]): void =
     for m in moduleList:
@@ -16,72 +17,72 @@ proc update(moduleList: array[256, SynthModule]): void =
         if(m of BoxModule):
             echo "Updating Box"
             update((m.BoxModule).moduleList)
-proc synthesize*(): void =
+proc synthesize*(synth: ref Synth): void =
 
-    # for m in synthContext.moduleList:
+    # for m in synth.moduleList:
     #     if(m == nil): continue
     #     m.update = true
 
-    update(synthContext.moduleList)
-    # print(synthContext)
+    update(synth.moduleList)
+    # print(synth)
 
-    let outModule = synthContext.moduleList[synthContext.outputIndex].OutputModule
+    let outModule = synth.moduleList[synth.outputIndex].OutputModule
     echo outModule.inputs[0].pinIndex
 
-    let overSampleValue = 1.0/synthContext.oversample.float64
+    let overSampleValue = 1.0/synth.synthInfos.oversample.float64
 
-    for i in 0..<synthContext.waveDims.x:
+    for i in 0..<synth.synthInfos.waveDims.x:
         var sum = 0.0
         var j = 0.0
         while(j < 1):
-            sum += outModule.synthesize((i.float64 + j) * PI * 2 / synthContext.waveDims.x.float64, outModule.inputs[0].pinIndex, synthContext.moduleList) * overSampleValue
+            sum += outModule.synthesize((i.float64 + j) * PI * 2 / synth.synthInfos.waveDims.x.float64, outModule.inputs[0].pinIndex, synth.moduleList, synth.synthInfos) * overSampleValue
             j += overSampleValue
-        outputFloat[i] = sum
+        synth.outputFloat[i] = sum
 
-    # fourierTransform(outputFloat.addr, synthContext.waveDims.x)
+    # fourierTransform(outputFloat.addr, synth.waveDims.x)
 
-    for i in 0..<synthContext.waveDims.x:
-        var value = min(max(outputFloat[i], -1.0), 1.0) + 1
+    for i in 0..<synth.synthInfos.waveDims.x:
+        var value = min(max(synth.outputFloat[i], -1.0), 1.0) + 1
 
-        outputInt[i] = round(value * (synthContext.waveDims.y.float64 / 2.0)).int32
+        synth.outputInt[i] = round(value * (synth.synthInfos.waveDims.y.float64 / 2.0)).int32
 
-proc synthesize2*(): void =
-    update(synthContext.moduleList)
-    # print(synthContext)
+proc synthesize2*(synth: var Synth): void =
+    update(synth.moduleList)
+    # print(synth)
 
-    let outModule = synthContext.moduleList[synthContext.outputIndex].OutputModule
+    let outModule = synth.moduleList[synth.outputIndex].OutputModule
     echo outModule.inputs[0].pinIndex
 
-    let overSampleValue = 1.0/synthContext.oversample.float64
+    let overSampleValue = 1.0/synth.synthInfos.oversample.float64
 
     for i in 0..<(4096 * 8):
         var sum = 0.0
-        sum += outModule.synthesize((i.float64) * PI * 2 / (4096 * 8), outModule.inputs[0].pinIndex, synthContext.moduleList)
-        outputFloat[i] = sum
+        sum += outModule.synthesize((i.float64) * PI * 2 / (4096 * 8), outModule.inputs[0].pinIndex, synth.moduleList, synth.synthInfos)
+        synth.outputFloat[i] = sum
 
-    # fourierTransform(outputFloat.addr, synthContext.waveDims.x)
+    # fourierTransform(outputFloat.addr, synth.waveDims.x)
 
     resample()
 
-proc generateWaveStr*(hex: bool = false): string =
+proc generateWaveStr*(synth: ref Synth, hex: bool = false): string =
     var str = ""
-    for i in 0..<synthContext.waveDims.x:
+    for i in 0..<synth.synthInfos.waveDims.x:
         if(hex):
-            var num = $(outputInt[i]).toHex().strip(true, chars = {'0'})
+            var num = $(synth.outputInt[i]).toHex().strip(true, chars = {'0'})
             if(num == ""): num = "0"
             str &= num & " "
         else:
-            str &= $outputInt[i] & " "
+            str &= $synth.outputInt[i] & " "
 
     return str & ";"
 
-proc generateSeqStr*(hex: bool = false): string =
-    let macroBackup = synthContext.macroFrame
+proc generateSeqStr*(synth: ref Synth, hex: bool = false): string =
+    let macroBackup = synth.synthInfos.macroFrame
     var outStr = ""
-    for mac in 0..<synthContext.macroLen:
-        synthContext.macroFrame = mac
-        synthesize()
-        outStr &= generateWaveStr(hex) & "\n"
-    synthContext.macroFrame = macroBackup
-    synthesize()
+    for mac in 0..<synth.synthInfos.macroLen:
+        synth.synthInfos.macroFrame = mac
+        synth.synthesize()
+        outStr &= synth.generateWaveStr(hex) & "\n"
+    synth.synthInfos.macroFrame = macroBackup
+    synth.synthesize()
     return outStr

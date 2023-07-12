@@ -1,6 +1,8 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
+import ../synthInfos
 
 type
     AverageModule* = ref object of SynthModule
@@ -18,7 +20,7 @@ proc constructAverageModule*(): AverageModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: AverageModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize(module: AverageModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     var output = 0.0
     var avg = 0.0
 
@@ -27,7 +29,7 @@ method synthesize(module: AverageModule, x: float64, pin: int, moduleList: array
             avg += 1.0
             let moduleA = moduleList[link.moduleIndex]
             if(moduleA == nil): continue
-            output += moduleA.synthesize(x, link.pinIndex, moduleList)
+            output += moduleA.synthesize(x, link.pinIndex, moduleList, synthInfos)
 
     if(avg == 0.0): return 0 else: return output / avg
 

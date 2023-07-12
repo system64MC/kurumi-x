@@ -1,6 +1,8 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
+import ../synthInfos
 import math
 
 type
@@ -14,10 +16,10 @@ proc constructClipperModule*(): ClipperModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: ClipperModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: ClipperModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
-    if(moduleA == nil): return 0 else: return min(max(moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList), module.clipMin), module.clipMax)
+    if(moduleA == nil): return 0 else: return min(max(moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos), module.clipMin), module.clipMax)
 
 import ../serializationObject
 import flatty

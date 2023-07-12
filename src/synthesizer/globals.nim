@@ -24,8 +24,8 @@ proc linearInterpolation*(x1, y1, x2, y2, x: float64): float64 =
 proc moduloFix*(a, b: float64): float64 =
     return ((a mod b) + b) mod b
 
-method doAdsr*(envelope: Adsr): float64 {.base.} =
-    let mac = synthContext.macroFrame.float64
+method doAdsr*(envelope: Adsr, macFrame: int32): float64 {.base.} =
+    let mac = macFrame.float64
     let env = envelope
     # Attack
     if(mac <= env.attack.float64):

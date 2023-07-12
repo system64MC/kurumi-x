@@ -83,7 +83,7 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
             moduleList[cellIndex] = unserializeFromClipboard()
             # synthContext.moduleList[index].breakAllLinks(synthContext.moduleList)
             moduleList[cellIndex].resetLinks()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Paste Module")
         return
     if(igGetIO().keyCtrl and igGetIO().keyShift and igIsKeyPressed(igGetKeyIndex(ImGuiKey.X))):
@@ -93,7 +93,7 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
                 module.breakAllLinks(synthContext.moduleList)
                 moduleClipboard = module.serialize()
                 deleteModule(cellIndex, moduleList)
-                synthesize()
+                synthContext.synthesize()
                 registerHistoryEvent("Cut Module")
         return
     if(igGetIO().keyAlt and igIsKeyPressed(68)):
@@ -101,7 +101,7 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
         if not(module of OutputModule):
             if(module != nil):
                 deleteModule(cellIndex, moduleList)
-                synthesize()
+                synthContext.synthesize()
                 registerHistoryEvent("Delete module")
         return
     if(igGetIO().keyAlt and igIsKeyPressed(igGetKeyIndex(ImGuiKey.V))):
@@ -114,7 +114,7 @@ proc copyPasteOps*(cellIndex: int, moduleList: var array[256, SynthModule], outI
             synthContext.outputIndex = cellIndex.uint16
         else:
             boxModule.outputIndex = cellIndex.uint16
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Moved Output")
         return
 
@@ -131,7 +131,7 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
             synthContext.outputIndex = cellIndex.uint16
         else:
             boxModule.outputIndex = cellIndex.uint16
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Moved Output")
 
     if (moduleList[cellIndex] of OutputModule): return
@@ -146,7 +146,7 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
             oldModule.breakAllLinks(moduleList)
             moduleClipboard = oldModule.serialize()
             deleteModule(cellIndex, moduleList) 
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Cut Module")
     
     if(igMenuItem("Paste")):
@@ -156,7 +156,7 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         moduleList[cellIndex] = unserializeFromClipboard()
         # moduleList[cellIndex].breakAllLinks(moduleList)
         moduleList[cellIndex].resetLinks()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Paste Module")
 
     igSeparator()
@@ -164,262 +164,268 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
     if(igBeginMenu("Oscillators")):
         if(igMenuItem("Sine Oscillator")):
             moduleList[cellIndex] = constructSineOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Sine OSC. Module")
 
         if(igMenuItem("Triangle Oscillator")):
             moduleList[cellIndex] = constructTriangleOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Triangle OSC. Module")
 
         if(igMenuItem("Saw Oscillator")):
             moduleList[cellIndex] = constructSawOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Saw OSC. Module")
 
         if(igMenuItem("Pulse Oscillator")):
             moduleList[cellIndex] = constructSquareOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Pulse OSC. Module")
 
         if(igMenuItem("Wavetable Oscillator")):
             moduleList[cellIndex] = constructWavetableOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Wavetable OSC. Module")
 
         if(igMenuItem("Noise Oscillator")):
             moduleList[cellIndex] = constructNoiseOscillatorModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Noise OSC. Module")
         igEndMenu()
 
     if(igMenuItem("FM")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructFmodModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created FM Module")
 
     if(igMenuItem("FM Pro")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructFmProModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created FM Pro Module")
 
     if(igMenuItem("Mixer")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructMixerModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Mixer Module")
 
     if(igMenuItem("Average")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructAverageModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Average Module")
 
     if(igMenuItem("Amplifier")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructAmplifierModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Amplifier Module")
 
     if(igMenuItem("Rectifier")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructRectifierModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Rectifier Module")
 
     if(igMenuItem("Absoluter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructAbsoluterModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Absoluter Module")
 
     if(igMenuItem("Clipper")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructClipperModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Clipper Module")
     
     if(igMenuItem("Inverter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructInverterModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Inverter Module")
 
     if(igMenuItem("Phase dist.")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructPdModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Phase Distortion Module")
     
     if(igMenuItem("Sync")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructSyncModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Sync Module")
 
     if(igMenuItem("Morpher")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructMorphModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Morpher Module")
 
     if(igMenuItem("Exponenter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructExpModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Exponenter Module")
 
     # if(igMenuItem("Overflower")):
     #     oldModule.breakAllLinks(moduleList)
     #     moduleList[cellIndex] = constructOverflowModule()
-    #     synthesize()
+    #     synthContext.synthesize()
 
     if(igMenuItem("Multiplier")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructMultModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Multiplier Module")
 
     if(igMenuItem("DualWave")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructDualWaveModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created DualWave Module")
 
     if(igMenuItem("Phase")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructPhaseModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Phase Module")
 
     if(igMenuItem("Wave Folding")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructWaveFoldModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Wave Folding Module")
     
     if(igMenuItem("Wave Mirroring")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructWaveMirrorModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Wave Mirroring Module")
 
     if(igMenuItem("DC Offset")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructDcOffsetModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created DC Offset Module")
 
     if(igMenuItem("Chord")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructChordModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Chord Module")
 
     if(igMenuItem("FM Feedback")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructFeedbackModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created FM Feedback Module")
 
     if(igMenuItem("Fast FM Feedback")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructFastFeedbackModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Fast FM FB Module")
 
     if(igMenuItem("Downsampler")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructDownsamplerModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created DOwnsample Module")
 
     if(igMenuItem("Quantizer")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructQuantizerModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Quantizer Module")
 
     if(igMenuItem("LFO")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructLfoModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created LFO Module")
 
     if(igMenuItem("Soft Clip")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructSoftClipModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Soft Clip Module")
 
     if(igMenuItem("Wave Folder")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructWaveFolderModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Wave Folder Module")
 
     if(igMenuItem("Splitter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructSplitterModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Splitter Module")
 
     if(igMenuItem("Normalizer")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructNormalizerModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Normalizer Module")
 
     if(igMenuItem("Biquad Filter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructBqFilterModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Biquad Filter Module")
 
     if(igMenuItem("Fast Biquad Filter")):
         oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFastBqFilterModule()
-        synthesize()
+        moduleList[cellIndex] = constructFastBqFilterModule(synthContext.synthInfos)
+        synthContext.synthesize()
         registerHistoryEvent("Created Fast BQ. Module")
 
     if(igMenuItem("Chebyshev Filter")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructChebyshevFilterModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Chebyshev Filter Module")
 
     if(igMenuItem("Fast Chebyshev Filter")):
         oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFastChebyshevFilterModule()
-        synthesize()
+        moduleList[cellIndex] = constructFastChebyshevFilterModule(synthContext.synthInfos)
+        synthContext.synthesize()
         registerHistoryEvent("Created Fast CH. Module")
     
     if(igMenuItem("Unison")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructUnisonModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Unison Module")
 
     if(igMenuItem("Quad Wave Assembler")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructQuadWaveAssemblerModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Quad Wave ASM Module")
 
     if(igMenuItem("Calculator")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructCalculatorModule()
-        synthesize()
+        synthContext.synthesize()
         registerHistoryEvent("Created Calculator Module")
+
+    if(igMenuItem("Avg. Filter")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructAvgFilterModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created Avg. FIlter Module")
     
     # CAUTION : This if statement is a temporary solution while I try to fix the "Abnormal Termination" crash.
     if(boxModule == nil):
         if(igMenuItem("Box")):
             oldModule.breakAllLinks(moduleList)
             moduleList[cellIndex] = constructBoxModule()
-            synthesize()
+            synthContext.synthesize()
             registerHistoryEvent("Created Box Module")
 
 proc drawModuleCreationContextMenu*(cellIndex: int, moduleList: var array[256, SynthModule], outIndex: uint16): void {.inline.} =

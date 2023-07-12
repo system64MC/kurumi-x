@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 
 type
     FmProModule* = ref object of SynthModule
@@ -48,7 +49,7 @@ proc constructFmProModule*(): FmProModule =
         ]
     return module
 
-method synthesize(module: FmProModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize(module: FmProModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
 
     # for operator in 0..<6:
     #     var sum = 0.0
@@ -67,7 +68,7 @@ method synthesize(module: FmProModule, x: float64, pin: int, moduleList: array[2
             if module.modMatrix[index] > 0.0:
                 sum += module.samples[modulator] * module.modMatrix[index]
         let modModule = if(module.inputs[operator].moduleIndex > -1): moduleList[module.inputs[operator].moduleIndex] else: nil
-        module.samples[operator] = if(modModule == nil): 0 else: modModule.synthesize(x + sum * 6, module.inputs[operator].pinIndex, moduleList)
+        module.samples[operator] = if(modModule == nil): 0 else: modModule.synthesize(x + sum * 6, module.inputs[operator].pinIndex, moduleList, synthInfos)
 
     # for operator in 0..<6:
     #     var sum = 0.0

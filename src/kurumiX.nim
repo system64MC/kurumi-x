@@ -1,3 +1,4 @@
+# import nimprof
 import application/app
 
 proc main() =

@@ -56,11 +56,11 @@ type
 
 proc saveState*() =
     var obj: SynthSerializeObject
-    obj.waveDims = synthContext.waveDims
-    obj.oversample = synthContext.oversample
+    obj.waveDims = synthContext.synthInfos.waveDims
+    obj.oversample = synthContext.synthInfos.oversample
     obj.outputIndex = synthContext.outputIndex
-    obj.macroLen = synthContext.macroLen
-    obj.macroFrame = synthContext.macroFrame
+    obj.macroLen = synthContext.synthInfos.macroLen
+    obj.macroFrame = synthContext.synthInfos.macroFrame
 
     for n in 0..<synthContext.moduleList.len:
         let m = synthContext.moduleList[n]
@@ -172,16 +172,18 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             moduleBox.moduleList = modList
             moduleBox.name = sData.name
             return moduleBox
+        of AVG_FILTER:
+            module = mData.data.fromFlatty(AvgFilterModule)
         else:
             module = nil
     return module       
 
 var moduleClipboard*: ModuleSerializationObject
 
-proc unserializeModules(data: SynthSerializeObject) =
+proc unserializeModules(synth: ref Synth, data: SynthSerializeObject) =
     for i in 0..<data.moduleList.len:
         let mData = data.moduleList[i]
-        synthContext.moduleList[i] = mData.unserializeModule()
+        synth.moduleList[i] = mData.unserializeModule()
 
 proc unserializeFromClipboard*(): SynthModule =
     return moduleClipboard.unserializeModule()
@@ -192,28 +194,28 @@ proc loadState*() =
         if(str.substr(0, "VAMPIRE ".len - 1) != "VAMPIRE "): return
         let data = str.substr("VAMPIRE ".len).uncompress().fromFlatty(SynthSerializeObject)
         # let data = str.fromFlatty(SynthSerializeObject)
-        synthContext.waveDims = data.waveDims
-        synthContext.oversample = data.oversample
+        synthContext.synthInfos.waveDims = data.waveDims
+        synthContext.synthInfos.oversample = data.oversample
         synthContext.outputIndex = data.outputIndex
-        synthContext.macroLen = data.macroLen
-        synthContext.macroFrame = data.macroFrame
-        data.unserializeModules()
-        synthesize()
+        synthContext.synthInfos.macroLen = data.macroLen
+        synthContext.synthInfos.macroFrame = data.macroFrame
+        synthContext.unserializeModules(data)
+        synthContext.synthesize()
 
     except IOError:
         echo "error"
         return
 
-proc saveStateHistory*(): string =
+proc saveStateHistory*(synth: ref Synth): string =
     var obj: SynthSerializeObject
-    obj.waveDims = synthContext.waveDims
-    obj.oversample = synthContext.oversample
+    obj.waveDims = synthContext.synthInfos.waveDims
+    obj.oversample = synthContext.synthInfos.oversample
     obj.outputIndex = synthContext.outputIndex
-    obj.macroLen = synthContext.macroLen
-    obj.macroFrame = synthContext.macroFrame
+    obj.macroLen = synthContext.synthInfos.macroLen
+    obj.macroFrame = synthContext.synthInfos.macroFrame
 
-    for n in 0..<synthContext.moduleList.len:
-        let m = synthContext.moduleList[n]
+    for n in 0..<synth.moduleList.len:
+        let m = synth.moduleList[n]
         if(m == nil):
             obj.moduleList[n] = ModuleSerializationObject(mType: NULL, data: "")
             continue
@@ -222,15 +224,17 @@ proc saveStateHistory*(): string =
     let str = "VAMPIRE " & compress(toFlatty(obj))
     return str
 
-proc loadStateHistory*(data: string) =
+proc loadStateHistory*(data: string): ref Synth =
     let str = data
     if(str.substr(0, "VAMPIRE ".len - 1) != "VAMPIRE "): return
     let data = str.substr("VAMPIRE ".len).uncompress().fromFlatty(SynthSerializeObject)
+    var synth = (ref Synth)()
     # let data = str.fromFlatty(SynthSerializeObject)
-    synthContext.waveDims = data.waveDims
-    synthContext.oversample = data.oversample
-    synthContext.outputIndex = data.outputIndex
-    synthContext.macroLen = data.macroLen
-    synthContext.macroFrame = data.macroFrame
-    data.unserializeModules()
-    synthesize()
+    synth.synthInfos.waveDims = data.waveDims
+    synth.synthInfos.oversample = data.oversample
+    synth.outputIndex = data.outputIndex
+    synth.synthInfos.macroLen = data.macroLen
+    synth.synthInfos.macroFrame = data.macroFrame
+    synth.unserializeModules(data)
+    synth.synthesize()
+    return synth

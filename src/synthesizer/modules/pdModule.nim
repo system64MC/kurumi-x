@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -20,21 +21,21 @@ proc linearInterpolation(x1, y1, x2, y2, x: float64): float64 =
     let slope = (y2 - y1) / (x2 - x1)
     return y1 + (slope * (x - x1))  
 
-method synthesize*(module: PdModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: PdModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0 
     else:
         
-        let distortX = if(not module.useAdsrX): module.xEnvelope.peak else: module.xEnvelope.doAdsr()
-        let distortY = if(not module.useAdsrY): module.yEnvelope.peak else: module.yEnvelope.doAdsr()
+        let distortX = if(not module.useAdsrX): module.xEnvelope.peak else: module.xEnvelope.doAdsr(synthInfos.macroFrame)
+        let distortY = if(not module.useAdsrY): module.yEnvelope.peak else: module.yEnvelope.doAdsr(synthInfos.macroFrame)
 
         if(x < distortX * 2 * PI): 
             # moduleA.synthesize(linearInterpolation(0, module.distortY, module.distortX, 1.0, x))
-            return moduleA.synthesize(linearInterpolation(0, 0, distortX, distortY, x / (2 * PI)) * 2 * PI, module.inputs[0].pinIndex, moduleList)
+            return moduleA.synthesize(linearInterpolation(0, 0, distortX, distortY, x / (2 * PI)) * 2 * PI, module.inputs[0].pinIndex, moduleList, synthInfos)
         else:
-            return moduleA.synthesize(linearInterpolation(distortX, distortY, 1.0, 1.0, x / (2 * PI)) * 2 * PI, module.inputs[0].pinIndex, moduleList)
+            return moduleA.synthesize(linearInterpolation(distortX, distortY, 1.0, 1.0, x / (2 * PI)) * 2 * PI, module.inputs[0].pinIndex, moduleList, synthInfos)
 
 import ../serializationObject
 import flatty

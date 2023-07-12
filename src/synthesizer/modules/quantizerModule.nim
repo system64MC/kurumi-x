@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -18,22 +19,22 @@ proc constructQuantizerModule*(): QuantizerModule =
     return module
 
 
-method synthesize(module: QuantizerModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize(module: QuantizerModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0.0
 
-    let quantization = if(module.useAdsr): module.quantizationEnvelope.doAdsr() else: module.quantizationEnvelope.peak
+    let quantization = if(module.useAdsr): module.quantizationEnvelope.doAdsr(synthInfos.macroFrame) else: module.quantizationEnvelope.peak
 
-    if(quantization >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList)
+    if(quantization >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)
 
     var x1 = 0.0
     var res = 0.0
     var outp = 0.0
     const delta = 1.0 / 4096.0
 
-    res = moduleA.synthesize(x, pin, moduleList)
+    res = moduleA.synthesize(x, pin, moduleList, synthInfos)
     if(res < 0):
         while x1 > res:
             outp = x1

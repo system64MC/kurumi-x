@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -14,15 +15,15 @@ proc constructSyncModule*(): SyncModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: SyncModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: SyncModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0 else:
             if(not module.useAdsr): 
-                return moduleA.synthesize(moduloFix(x * module.envelope.peak.float64, 2 * PI), module.inputs[0].pinIndex, moduleList)
+                return moduleA.synthesize(moduloFix(x * module.envelope.peak.float64, 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
             else:
-                return moduleA.synthesize(moduloFix(x * module.envelope.doAdsr(), 2 * PI), module.inputs[0].pinIndex, moduleList)
+                return moduleA.synthesize(moduloFix(x * module.envelope.doAdsr(synthInfos.macroFrame), 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
 
 import ../serializationObject
 import flatty

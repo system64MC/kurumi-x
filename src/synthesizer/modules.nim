@@ -39,7 +39,8 @@ import modules/[
     fastFeedbackModule,
     fastBqFilterModule,
     fastChebyshevFilterModule,
-    boxModule
+    boxModule,
+    avgFilterModule
 ]
 
 
@@ -84,3 +85,4 @@ export fastFeedbackModule
 export fastBqFilterModule
 export fastChebyshevFilterModule
 export boxModule
+export avgFilterModule

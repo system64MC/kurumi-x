@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 
 type
     MultModule* = ref object of SynthModule
@@ -14,7 +15,7 @@ proc constructMultModule*(): MultModule =
         Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: MultModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: MultModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     var moduleA: SynthModule = nil
     var moduleB: SynthModule = nil
 
@@ -25,8 +26,8 @@ method synthesize*(module: MultModule, x: float64, pin: int, moduleList: array[2
     
     if(moduleA == nil and moduleB == nil): return 0
 
-    let a = if(moduleA != nil): moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList) else: 1.0
-    let b = if(moduleB != nil): moduleB.synthesize(x, module.inputs[1].pinIndex, moduleList) else: 1.0
+    let a = if(moduleA != nil): moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos) else: 1.0
+    let b = if(moduleB != nil): moduleB.synthesize(x, module.inputs[1].pinIndex, moduleList, synthInfos) else: 1.0
 
     return a * b
 

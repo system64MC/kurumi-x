@@ -1,7 +1,9 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import outputModule
+import ../synthInfos
 
 const GRID_SIZE_X = 16
 const GRID_SIZE_Y = 16
@@ -29,12 +31,12 @@ proc constructBoxModule*(): BoxModule =
     module.moduleList[7] = constructOutputModule()
     return module
 
-method synthesize(module: BoxModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize(module: BoxModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
 
     let outModule = module.moduleList[module.outputIndex].OutputModule
     # echo outModule.inputs[0].pinIndex
 
-    return outModule.synthesize(x, outModule.inputs[0].pinIndex, module.moduleList)
+    return outModule.synthesize(x, outModule.inputs[0].pinIndex, module.moduleList, synthInfos)
     # let val = outModule.synthesize(x, outModule.inputs[0].pinIndex)
 
 import ../serializationObject

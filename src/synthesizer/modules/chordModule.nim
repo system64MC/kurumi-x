@@ -1,7 +1,9 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
+import ../synthInfos
 
 type
     ChordModule* = ref object of SynthModule
@@ -13,7 +15,7 @@ proc constructChordModule*(): ChordModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: ChordModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize*(module: ChordModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
@@ -24,7 +26,7 @@ method synthesize*(module: ChordModule, x: float64, pin: int, moduleList: array[
         for i in module.mults:
             if(i == 0): continue
             divider += 1.0
-            sum += moduleA.synthesize(moduloFix(x * i.float64, 2 * PI), module.inputs[0].pinIndex, moduleList)
+            sum += moduleA.synthesize(moduloFix(x * i.float64, 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
 
         if(divider == 0.0): return divider
         return sum / divider

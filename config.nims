@@ -30,11 +30,25 @@ if defined(emscripten):
 #   switch("passC", "-traditional")
   switch("passL", "-o step1.html --shell-file shell_minimal.html")
 else:
-    --d:debug
+    when defined(release):
+      --boundChecks:off
+      --overflowChecks:off
+      --floatChecks:off
+      --nanChecks:off
+      --infChecks:off
+    # else:
+    #   --profiler:on
+    #   --stacktrace:on
+    # --d:debug
+    # --cc:clang
     --backend:cpp
     --verbosity:1
-    --threads:off
+    --threads:on
+    # --d:ThreadPoolSize=8
+    # --d :FixedChanSize=16
     --d:nimDontSetUtf8CodePage
     --opt:speed
-    --passC:"-flto -ofast"
+    --passC:"-flto -O3 -Ofast"
     --passL:"-flto -s"
+    --mm:arc
+    --d:useMimAlloc 

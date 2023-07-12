@@ -1,6 +1,7 @@
 # import module
 # import ../globals
 # import ../utils/utils
+# import ../synthInfos
 # import math
 
 # type
@@ -56,6 +57,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -75,7 +77,7 @@ proc constructFastFeedbackModule*(): FastFeedbackModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: FastFeedbackModule, x: float64, pin: int, moduleList: array[256, SynthModule]): float64 =
+method synthesize(module: FastFeedbackModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     # if(module.inputs[0].moduleIndex < 0): 
     #     module.prev = 0
     #     module.curr = 0
@@ -84,40 +86,40 @@ method synthesize(module: FastFeedbackModule, x: float64, pin: int, moduleList: 
 
     if(module.update):
         if(module.inputs[0].moduleIndex < 0):
-            for i in 0..<synthContext.waveDims.x * synthContext.oversample:
+            for i in 0..<synthInfos.waveDims.x * synthInfos.oversample:
                 module.prev = 0
                 module.curr = 0
                 module.buffer[i] = 0
             return 0
         let moduleA = moduleList[module.inputs[0].moduleIndex]
         if(moduleA == nil):
-            for i in 0..<synthContext.waveDims.x * synthContext.oversample:
+            for i in 0..<synthInfos.waveDims.x * synthInfos.oversample:
                 module.prev = 0
                 module.curr = 0
                 module.buffer[i] = 0
             return 0
         else:
-            let l = synthContext.waveDims.x * synthContext.oversample
-            let fb = if(module.useAdsr): module.fbEnvelope.doAdsr() else: module.fbEnvelope.peak
+            let l = synthInfos.waveDims.x * synthInfos.oversample
+            let fb = if(module.useAdsr): module.fbEnvelope.doAdsr(synthInfos.macroFrame) else: module.fbEnvelope.peak
             var output = 0.0
             for i in 0..<l:
                 let x1 = (i.float64 * PI * 2) / l.float64
-                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList)
+                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList, synthInfos)
                 # echo x
                 module.buffer[i] = output
                 module.prev = module.curr
                 module.curr = output
             for i in 0..<l:
                 let x1 = (i.float64 * PI * 2) / l.float64
-                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList)
+                output = moduleA.synthesize(moduloFix(x1 + ((module.curr + module.prev)/2) * fb, (2 * PI).float64), pin, moduleList, synthInfos)
                 # echo x
                 module.buffer[i] = output
                 module.prev = module.curr
                 module.curr = output
         module.update = false
 
-    # echo module.buffer[((x / (2 * PI)) * (synthContext.waveDims.x * synthContext.oversample).float64).int]
-    return module.buffer[((x / (2 * PI)) * (synthContext.waveDims.x * synthContext.oversample).float64).int]
+    # echo module.buffer[((x / (2 * PI)) * (synthInfos.waveDims.x * synthInfos.oversample).float64).int]
+    return module.buffer[((x / (2 * PI)) * (synthInfos.waveDims.x * synthInfos.oversample).float64).int]
 
 
 import ../serializationObject

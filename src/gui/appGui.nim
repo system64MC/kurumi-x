@@ -8,6 +8,8 @@ import ../synthesizer/exportFile
 import ../synthesizer/globals
 import std/os
 import history
+import std/threadpool
+# import malebolgia
 
 let demo = true
 
@@ -40,21 +42,35 @@ proc drawApp*(): void {.inline.} =
                 echo "Loading Patch"
             
             if(igBeginMenu("Export")):
+                # var m = createMaster()
                 if(igBeginMenu(".WAV")):
                     if(igMenuItem("8-Bits .WAV")):
-                        saveWav(8, false)
+                        let data = history.history.historyStack[history.history.historyPointer].synthState
+                        # var th: Thread[string, int, bool]
+                        # createThread(th, bootGameInstance, saveWav, data, 8, false)
+                        # spawn(saveWav(data, 8, false))
+                        spawn(saveWav(data, 8, false))
+                        # saveWav(data, 8, false)
                     if(igMenuItem("8-Bits .WAV (Sequence)")):
-                        saveWav(8, true)
+                        let data = history.history.historyStack[history.history.historyPointer].synthState
+                        spawn(saveWav(data, 8, true))
+                        # saveWav(data, 8, true)
                     if(igMenuItem("16-Bits .WAV")):
-                        saveWav(16, false)
+                        let data = history.history.historyStack[history.history.historyPointer].synthState
+                        spawn(saveWav(data, 16, false))
+                        # saveWav(data, 16, false)
                     if(igMenuItem("16-Bits .WAV (Sequence)")):
-                        saveWav(16, true)
+                        let data = history.history.historyStack[history.history.historyPointer].synthState
+                        spawn(saveWav(data, 16, true))
+                        # saveWav(data, 16, true)
                     igEndMenu()
                 
                 if(igMenuItem("Dn-Famitracker (N163)")):
-                    saveN163(false)
+                    let data = history.history.historyStack[history.history.historyPointer].synthState
+                    spawn data.saveN163(false)
                 if(igMenuItem("Dn-Famitracker (N163, with sequence)")):
-                    saveN163(true)
+                    let data = history.history.historyStack[history.history.historyPointer].synthState
+                    spawn data.saveN163(true)
                 if(igMenuItem("Furnace Wave (FUW)")):
                     saveFUW()
                 if(igMenuItem("Deflemask Wave (DMW)")):
@@ -90,6 +106,6 @@ proc drawApp*(): void {.inline.} =
 
     window.swapBuffers()
     glfwSwapInterval(1)
-    sleep(5)
+    # sleep(5)
 
   
