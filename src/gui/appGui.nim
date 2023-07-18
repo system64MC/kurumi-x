@@ -1,6 +1,6 @@
 import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
 import nimgl/[opengl, glfw]
-import outputWIndow
+import outputWindow
 import grid
 import moduleCreateMenu
 import moduleDraw

@@ -40,7 +40,8 @@ import modules/[
     fastBqFilterModule,
     fastChebyshevFilterModule,
     boxModule,
-    avgFilterModule
+    avgFilterModule,
+    waveShaperModule
 ]
 
 
@@ -86,3 +87,4 @@ export fastBqFilterModule
 export fastChebyshevFilterModule
 export boxModule
 export avgFilterModule
+export waveShaperModule

@@ -45,7 +45,8 @@ type
         FAST_BQ_FILTER,
         FAST_CH_FILTER,
         BOX,
-        AVG_FILTER
+        AVG_FILTER,
+        WAVE_SHAPER
 
     ModuleSerializationObject* = object
         mType*: ModuleType

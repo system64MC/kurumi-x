@@ -192,18 +192,104 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
             synthContext.synthesize()
             registerHistoryEvent("Created Noise OSC. Module")
         igEndMenu()
+    
+    if(igBeginMenu("Filters")):
+        if(igMenuItem("Biquad Filter")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructBqFilterModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Biquad Filter Module")
 
-    if(igMenuItem("FM")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFmodModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created FM Module")
+        if(igMenuItem("Fast Biquad Filter")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFastBqFilterModule(synthContext.synthInfos)
+            synthContext.synthesize()
+            registerHistoryEvent("Created Fast BQ. Module")
 
-    if(igMenuItem("FM Pro")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFmProModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created FM Pro Module")
+        if(igMenuItem("Chebyshev Filter")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructChebyshevFilterModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Chebyshev Filter Module")
+
+        if(igMenuItem("Fast Chebyshev Filter")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFastChebyshevFilterModule(synthContext.synthInfos)
+            synthContext.synthesize()
+            registerHistoryEvent("Created Fast CH. Module")
+
+        if(igMenuItem("Avg. Filter")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructAvgFilterModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Avg. FIlter Module")
+        igEndMenu()
+
+    if(igBeginMenu("Distortions")):
+        if(igMenuItem("Clipper")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructClipperModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Clipper Module")
+
+        if(igMenuItem("Soft Clip")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructSoftClipModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Soft Clip Module")
+
+        if(igMenuItem("Wave Folder")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructWaveFolderModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Wave Folder Module")
+        igEndMenu()
+
+    if(igBeginMenu("Bitcrushers")):
+        if(igMenuItem("Downsampler")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructDownsamplerModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created DOwnsample Module")
+            
+        if(igMenuItem("Quantizer")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructQuantizerModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Quantizer Module")
+        igEndMenu()
+
+    if(igBeginMenu("Modulations")):
+        if(igMenuItem("FM")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFmodModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created FM Module")
+
+        if(igMenuItem("FM Pro")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFmProModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created FM Pro Module")
+        
+        if(igMenuItem("FM Feedback")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFeedbackModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created FM Feedback Module")
+
+        if(igMenuItem("Fast FM Feedback")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructFastFeedbackModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Fast FM FB Module")
+            
+        if(igMenuItem("Phase dist.")):
+            oldModule.breakAllLinks(moduleList)
+            moduleList[cellIndex] = constructPdModule()
+            synthContext.synthesize()
+            registerHistoryEvent("Created Phase Distortion Module")
+        igEndMenu()
 
     if(igMenuItem("Mixer")):
         oldModule.breakAllLinks(moduleList)
@@ -234,12 +320,6 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         moduleList[cellIndex] = constructAbsoluterModule()
         synthContext.synthesize()
         registerHistoryEvent("Created Absoluter Module")
-
-    if(igMenuItem("Clipper")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructClipperModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Clipper Module")
     
     if(igMenuItem("Inverter")):
         oldModule.breakAllLinks(moduleList)
@@ -247,11 +327,7 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         synthContext.synthesize()
         registerHistoryEvent("Created Inverter Module")
 
-    if(igMenuItem("Phase dist.")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructPdModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Phase Distortion Module")
+    
     
     if(igMenuItem("Sync")):
         oldModule.breakAllLinks(moduleList)
@@ -318,47 +394,11 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         synthContext.synthesize()
         registerHistoryEvent("Created Chord Module")
 
-    if(igMenuItem("FM Feedback")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFeedbackModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created FM Feedback Module")
-
-    if(igMenuItem("Fast FM Feedback")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFastFeedbackModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Fast FM FB Module")
-
-    if(igMenuItem("Downsampler")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructDownsamplerModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created DOwnsample Module")
-
-    if(igMenuItem("Quantizer")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructQuantizerModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Quantizer Module")
-
     if(igMenuItem("LFO")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructLfoModule()
         synthContext.synthesize()
         registerHistoryEvent("Created LFO Module")
-
-    if(igMenuItem("Soft Clip")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructSoftClipModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Soft Clip Module")
-
-    if(igMenuItem("Wave Folder")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructWaveFolderModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Wave Folder Module")
 
     if(igMenuItem("Splitter")):
         oldModule.breakAllLinks(moduleList)
@@ -371,30 +411,6 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         moduleList[cellIndex] = constructNormalizerModule()
         synthContext.synthesize()
         registerHistoryEvent("Created Normalizer Module")
-
-    if(igMenuItem("Biquad Filter")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructBqFilterModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Biquad Filter Module")
-
-    if(igMenuItem("Fast Biquad Filter")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFastBqFilterModule(synthContext.synthInfos)
-        synthContext.synthesize()
-        registerHistoryEvent("Created Fast BQ. Module")
-
-    if(igMenuItem("Chebyshev Filter")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructChebyshevFilterModule()
-        synthContext.synthesize()
-        registerHistoryEvent("Created Chebyshev Filter Module")
-
-    if(igMenuItem("Fast Chebyshev Filter")):
-        oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructFastChebyshevFilterModule(synthContext.synthInfos)
-        synthContext.synthesize()
-        registerHistoryEvent("Created Fast CH. Module")
     
     if(igMenuItem("Unison")):
         oldModule.breakAllLinks(moduleList)
@@ -414,11 +430,11 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         synthContext.synthesize()
         registerHistoryEvent("Created Calculator Module")
 
-    if(igMenuItem("Avg. Filter")):
+    if(igMenuItem("Waveshaper")):
         oldModule.breakAllLinks(moduleList)
-        moduleList[cellIndex] = constructAvgFilterModule()
+        moduleList[cellIndex] = constructWaveshaperModule()
         synthContext.synthesize()
-        registerHistoryEvent("Created Avg. FIlter Module")
+        registerHistoryEvent("Created Waveshaper Module")
     
     # CAUTION : This if statement is a temporary solution while I try to fix the "Abnormal Termination" crash.
     if(boxModule == nil):

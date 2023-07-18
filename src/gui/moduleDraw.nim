@@ -770,6 +770,262 @@ method draw(module: CalculatorModule, index: int, moduleList: var array[256, Syn
     igEndColumns()
     return
 
+
+method draw(module: WaveShaperModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Wave Shaper", index, COLOR_OSCILLATOR.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index, moduleList)
+
+        var str = ($module.formula)
+        str.setLen((module.formula.len) + 1024)
+        var strC = str.cstring
+        if(igInputTextMultiline("##0", strC, str.len.uint32 + 1024 + 1, size = ImVec2(x: 128, y: 100), flags = ImGuiInputTextFlags.AllowTabInput)):
+            module.formula = $strC
+            # module.refreshWaveform()
+            synthContext.synthesize()
+            registerHistoryEvent("Edit Shaper formula")
+
+        if(igButton("Edit")):
+            igOpenPopup("Shaper editor")
+            
+
+        # igPushStyleVar(ImGuiStyleVar.ChildBorderSize, 1)
+        if(igBeginPopupModal("Shaper editor", nil, flags = ImGuiWindowFlags.NoResize)):
+            igSetWindowSize("Shaper editor", ImVec2(x: 660, y: 550))
+            igBeginTabBar("tabs2")
+            if(igBeginTabItem("General##1")):
+                igBeginTable("", 2)
+                igTableNextColumn()
+                igBeginChild("", ImVec2(x: 320+80, y: 420+20), flags = ImGuiWindowFlags.NoResize)
+                if(igInputTextMultiline("##1", strC, str.len.uint32 + 1024 + 1, size = ImVec2(x: 320, y: 230), flags = ImGuiInputTextFlags.AllowTabInput)):
+                    module.formula = $strC
+                    # module.refreshWaveform()
+                    synthContext.synthesize()
+                    registerHistoryEvent("Edit Shaper formula")
+                if(igSliderFloat("A", module.a.peak.addr, 0.0f, 4.0f)):
+                    synthContext.synthesize()
+                if(igIsItemDeactivated()):
+                    registerHistoryEvent("Edit A value")
+                if(igSliderFloat("B", module.b.peak.addr, 0.0f, 4.0f)):
+                    synthContext.synthesize()
+                if(igIsItemDeactivated()):
+                    registerHistoryEvent("Edit B value")
+                if(igSliderFloat("C", module.c.peak.addr, 0.0f, 4.0f)):
+                    synthContext.synthesize()
+                if(igIsItemDeactivated()):
+                    registerHistoryEvent("Edit C value")
+                if(igSliderFloat("D", module.d.peak.addr, 0.0f, 4.0f)):
+                    synthContext.synthesize()
+                if(igIsItemDeactivated()):
+                    registerHistoryEvent("Edit D value")
+                igBeginChild("func", ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
+                var dl = igGetWindowDrawList()
+                var position = ImVec2()
+                igGetWindowPosNonUDT(position.addr)
+
+                for i in -5..25:
+                    let r = 1.0/20.0
+                    let a = r * i.float64
+                    dl.addLine(
+                        ImVec2(x: position.x + 32 + a * 192, y: position.y + 0),
+                        ImVec2(x: position.x + 32 + a * 192, y: position.y + 256),
+                        0xFF_7F_7F_7F.uint32,
+                        1.0
+                    )
+
+                    dl.addLine(
+                        ImVec2(x: position.x + 0, y: position.y + 32 + a * 192),
+                        ImVec2(x: position.x + 256, y: position.y + 32 + a * 192),
+                        0xFF_7F_7F_7F.uint32,
+                        1.0
+                    )
+                # Drawing X and Y axis
+                dl.addLine(
+                    ImVec2(x: position.x + 0, y: position.y + 128),
+                    ImVec2(x: position.x + 256, y: position.y + 128),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+                dl.addLine(
+                    ImVec2(x: position.x + 128, y: position.y + 0),
+                    ImVec2(x: position.x + 128, y: position.y + 256),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+
+                dl.addLine(
+                    ImVec2(x: position.x + 128 - 4, y: position.y + 32),
+                    ImVec2(x: position.x + 128 + 4, y: position.y + 32),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+                dl.addLine(
+                    ImVec2(x: position.x + 128 - 4, y: position.y + 256 - 32),
+                    ImVec2(x: position.x + 128 + 4, y: position.y + 256 - 32),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+
+                dl.addLine(
+                    ImVec2(x: position.x + 32, y: position.y + 128 - 4),
+                    ImVec2(x: position.x + 32, y: position.y + 128 + 4),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+                dl.addLine(
+                    ImVec2(x: position.x + 256 - 32, y: position.y + 128 - 4),
+                    ImVec2(x: position.x + 256 - 32, y: position.y + 128 + 4),
+                    0xFF_FF_FF_FF.uint32,
+                    2.0
+                )
+
+                const STEP = 2.6 / 256.0
+
+                var i = -1.3
+                while i < 1.3:
+                    let val = module.computeEval(i.float64, moduleList, synthContext.synthInfos)
+                    let val2 = module.computeEval((i + STEP).float64, moduleList, synthContext.synthInfos)
+                    # dl.addLine(
+                    #     ImVec2(x: position.x + val * 256 + 128, y: position.y * 192),
+                    #     ImVec2(x: position.x + val2 * 256 + 128, y: position.y * 192),
+                    #     0xFF_FF_00_00.uint32,
+                    #     2.0
+                    # )
+                    dl.addLine(
+                        ImVec2(x: position.x + (i / STEP) + 128, y: position.y + 128 + -val * 96),
+                        ImVec2(x: position.x + ((i + STEP) / STEP) + 128, y: position.y + 128 + -val2 * 96),
+                        0xFF_FF_00_00.uint32,
+                        2.0
+                    )
+                    i += STEP
+                igEndChild()
+                igEndChild()
+                if(igButton("Close")):
+                    igCloseCurrentPopup()
+                igTableNextColumn()
+                igBeginChild("#111")
+                module.drawOscilloscope(index, moduleList)
+                igBeginChild("", ImVec2(x: 320+80, y: 400), flags = ImGuiWindowFlags.NoResize)
+                igText("Variables :")
+                igText("x -> the current X value.")
+                igText("a -> value returned by first pin.")
+                igText("b -> value returned by second pin.")
+                igText("c -> value returned by third pin.")
+                igText("d -> value returned by fourth pin.")
+                igText("fb -> previous result")
+                igText("wl -> Length of final waveform")
+                igText("wh -> Height of final waveform")
+                
+                igText("env -> Current envelope value")
+                igText("est -> Envelope Start")
+                igText("ea1 -> Envelope Attack 1")
+                igText("ep1 -> Envelope Peak 1")
+                igText("ed1 -> Envelope Decay 1")
+                igText("es1 -> Envelope SUStain 1")
+                igText("ea2 -> Envelope Attack 2")
+                igText("ep2 -> Envelope Peak 2")
+                igText("ed2 -> Envelope Decay 2")
+                igText("es2 -> Envelope SUStain 2\n")
+
+                igText("pi -> 3.1415...")
+                igText("tau -> 2x pi")
+                igText("e -> Euler's number")
+                igText("flan -> Q.E.D. \"Ripples of 495 Years\"\n")
+
+                igText("\nFunctions :")
+                igText("synth(pin, x) -> synthesizes the previous\nmodule with a given pin and X value.")
+                igText("avg(var1, var2,...) -> Return the average of\nall arguments.")
+                igText("clamp(min, x, max) -> Clamp X between\nmin and max.")
+                igText("sin(x) -> Returns the sine of X")
+                igText("cos(x) -> Returns the cosine of X")
+                igText("tan(x) -> Returns the tangent of X")
+                igText("asin(x) -> Returns the arcsin of X")
+                igText("acos(x) -> Returns the arccos of X")
+                igText("atan(x) -> Returns the htan of X")
+                igText("sinh(x) -> Returns the hsin of X")
+                igText("cosh(x) -> Returns the hcos of X")
+                igText("tanh(x) -> Returns the htan of X")
+                igText("floor(x)")
+                igText("ceil(x)")
+                igText("ln(x)")
+                igText("log10(x)")
+                igText("log2(x)")
+                igText("max(var1, var2, ...)")
+                igText("min(var1, var2, ...)")
+                igText("pow(x, y)")
+                igText("exp(x)")
+                igEndChild()
+                igEndChild()
+                igEndTable()
+                igEndTabItem()
+            if(igBeginTabItem("ADSR")):
+                if(igCheckbox("Use A ADSR", module.useAdsrA.addr)):
+                    synthContext.synthesize()
+                    registerHistoryEvent("A use ADSR" & (if(module.useAdsrA): "checked" else: "unchecked"))
+                if(igCheckbox("Use B ADSR", module.useAdsrB.addr)):
+                    synthContext.synthesize()
+                    registerHistoryEvent("B use ADSR" & (if(module.useAdsrB): "checked" else: "unchecked"))
+                if(igCheckbox("Use C ADSR", module.useAdsrC.addr)):
+                    synthContext.synthesize()
+                    registerHistoryEvent("C use ADSR" & (if(module.useAdsrC): "checked" else: "unchecked"))
+                if(igCheckbox("Use D ADSR", module.useAdsrD.addr)):
+                    synthContext.synthesize()
+                    registerHistoryEvent("D use ADSR" & (if(module.useAdsrD): "checked" else: "unchecked"))
+                
+                
+                igBeginTabBar("envs")
+                if(module.useAdsrA):
+                    if(igBeginTabItem("ADSR A")):
+                        igBeginChild("adsrA", border = true)
+                        module.a.addr.drawEnvelope(4)
+                        igEndChild()
+                        igEndTabItem()
+                if(module.useAdsrB):
+                    if(igBeginTabItem("ADSR B")):
+                        igBeginChild("adsrB", border = true)
+                        module.b.addr.drawEnvelope(4)
+                        igEndChild()
+                        igEndTabItem()
+                if(module.useAdsrC):
+                    if(igBeginTabItem("ADSR C")):
+                        igBeginChild("adsrC", border = true)
+                        module.c.addr.drawEnvelope(4)
+                        igEndChild()
+                        igEndTabItem()
+                if(module.useAdsrD):
+                    if(igBeginTabItem("ADSR D")):
+                        igBeginChild("adsrD", border = true)
+                        module.d.addr.drawEnvelope(4)
+                        igEndChild()
+                        igEndTabItem()
+                igEndTabBar()
+                igEndTabItem()
+            # if(igBeginTabItem("ADSR##1")):
+            #     module.envelope.addr.drawEnvelope(4)
+            #     igEndTabItem()
+            igEndTabBar()
+            igEndPopup()
+        igEndTabItem()
+        
+    # if(igBeginTabItem("ADSR")):
+    #     module.envelope.addr.drawEnvelope(4)
+    #     igEndTabItem()
+    igEndTabBar()
+
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
 method draw(module: AmplifierModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
@@ -1777,7 +2033,7 @@ method draw(module: BoxModule, index: int, moduleList: var array[256, SynthModul
                     drawModuleCreationContextMenuBox(bIndex, module.moduleList, module.outputIndex, module)
                     # drawModuleCreationContextMenu(index)
                     if(igIsItemHovered()):
-                        copyPasteOps(bIndex, module.moduleList, module.outputIndex)
+                        copyPasteOps(bIndex, module.moduleList, module.outputIndex, module)
                 continue
             scrollPoint.x = igGetScrollX()
             scrollPoint.y = igGetScrollY()

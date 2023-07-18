@@ -83,7 +83,7 @@ method synthesize(module: FeedbackModule, x: float64, pin: int, moduleList: arra
 
     var x1 = 0.0
     var res = 0.0
-    const delta = 1.0 / 4096.0
+    const delta = 1.0 / 4096.0*9
     var phase = 0.0
 
     let fb = if(module.useAdsr): module.fbEnvelope.doAdsr(synthInfos.macroFrame) else: module.fbEnvelope.peak
