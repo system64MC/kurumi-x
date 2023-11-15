@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 
 type
     RectifierModule* = ref object of SynthModule
@@ -11,13 +12,13 @@ proc constructRectifierModule*(): RectifierModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: RectifierModule, x: float64, pin: int): float64 =
+method synthesize*(module: RectifierModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0.0
     else:
-        let output = moduleA.synthesize(x, module.inputs[0].pinIndex)
+        let output = moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)
         if(output > 0): return output else: return 0.0
 
 import ../serializationObject

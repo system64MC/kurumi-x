@@ -1,5 +1,6 @@
 import module
 import ../utils/utils
+import ../synthInfos
 import ../globals
 import math
 import std/random
@@ -33,7 +34,7 @@ proc noiseRandom(): float64 =
     return rand(2.0) - 1.0
 
 
-method synthesize(module: NoiseOscillatorModule, x: float64, pin: int): float64 =
+method synthesize(module: NoiseOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     case module.noiseMode:
     of 0:
         return noise1BitLsfr()

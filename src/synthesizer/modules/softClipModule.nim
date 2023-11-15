@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -12,10 +13,10 @@ proc constructSoftClipModule*(): SoftClipModule =
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize*(module: SoftClipModule, x: float64, pin: int): float64 =
+method synthesize*(module: SoftClipModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
-    if(moduleA == nil): return 0.0 else: return (2.0/(1 +  pow(E, (-2 * (moduleA.synthesize(x, module.inputs[0].pinIndex)))))) - 1
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
+    if(moduleA == nil): return 0.0 else: return (2.0/(1 +  pow(E, (-2 * (moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)))))) - 1
 
 import ../serializationObject
 import flatty

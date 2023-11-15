@@ -1,10 +1,16 @@
-import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
-import nimgl/[opengl, glfw]
+import imgui
+
 import moduleCreateMenu
 import moduleDraw
 import ../synthesizer/synth
 import ../synthesizer/globals
 import ../synthesizer/utils/utils
+import ../synthesizer/modules/outputModule
+import ../synthesizer/modules/module
+import ../synthesizer/serialization
+import ../synthesizer/linkManagement
+import ../synthesizer/synthesizeWave
+import history
 
 const
     WIN_PAD = 8.0f
@@ -23,7 +29,9 @@ proc `+`(vec1, vec2: ImVec2): ImVec2 =
 var scrollPoint = ImVec2()
 
 proc drawGrid*(): void {.inline.} =
-
+    var style = igGetStyle().colors[ImGuiCol.ChildBg.int].addr
+    let alpha = style.w
+    style.w = 0
     if(igBeginTable("table", GRID_SIZE_X.int32, (ImGuiTableFlags.SizingFixedSame.int or ImGuiTableFlags.ScrollX.int or ImGuiTableFlags.ScrollY.int).ImGuiTableFlags)):
         for i in 0..<GRID_SIZE_Y:
             igTableNextRow()
@@ -32,17 +40,23 @@ proc drawGrid*(): void {.inline.} =
                 let index = i * GRID_SIZE_X + j
                 
                 igBeginChild(($index).cstring, ImVec2(x: 256, y: 256), true, ImGuiWindowFlags.NoResize)
-                drawModule(index)
+                drawModule(index, synthContext.moduleList)
 
                 # igButton(("x:" & $j & " y:" & $i).cstring, ImVec2(x: 256, y: 256))
                 igEndChild()
-                drawModuleCreationContextMenu(index)
+                drawModuleCreationContextMenu(index, synthContext.moduleList, synthContext.outputIndex)
+                # Copy paste features
+                if(igIsItemHovered()):
+                    copyPasteOps(index, synthContext.moduleList, synthContext.outputIndex)
                 continue
         scrollPoint.x = igGetScrollX()
         scrollPoint.y = igGetScrollY()
         igEndTable()
-    
+    style.w = alpha
+
     # Drawing links
+    # var style = igGetStyleColorVec4(ImGuiCol.ChildBg)[]
+    
     var dl = igGetWindowDrawList()
     var winPos = ImVec2()
     igGetWindowPosNonUDT(winPos.addr)
@@ -85,3 +99,4 @@ proc drawGrid*(): void {.inline.} =
         if(igIsMouseDoubleClicked(ImGuiMouseButton.Left)):
             selectedLink.moduleIndex = -1
             selectedLink.pinIndex = -1
+    

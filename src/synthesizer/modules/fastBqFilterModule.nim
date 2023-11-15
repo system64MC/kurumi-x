@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -34,9 +35,9 @@ proc notetofreq(n: float64): float64 =
 
 const LENGTH = 4096.0
 
-proc setBqFilter(filterModule: FastBqFilterModule, cutoff: float64, q: float): void =
+proc setBqFilter(filterModule: FastBqFilterModule, cutoff: float64, q: float, synthInfos: SynthInfos): void =
     filterModule.filter = new BqFilter
-    let sampleRate = notetofreq(filterModule.note.float64) * (synthContext.waveDims.x * synthContext.oversample).float64
+    let sampleRate = notetofreq(filterModule.note.float64) * (synthInfos.waveDims.x * synthInfos.oversample).float64
     var norm = 0.0
     var K = tan(PI * cutoff / sampleRate)
     case filterModule.filtertype.FilterTypes:
@@ -106,15 +107,15 @@ proc setBqFilter(filterModule: FastBqFilterModule, cutoff: float64, q: float): v
 
     
 
-proc constructFastBqFilterModule*(): FastBqFilterModule =
+proc constructFastBqFilterModule*(synthInfos: SynthInfos): FastBqFilterModule =
     var module = new FastBqFilterModule
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     module.inputs = @[Link(moduleIndex: -1, pinIndex: -1)]
-    let sampleRate = notetofreq(module.note.float64) * (synthContext.waveDims.x * synthContext.oversample).float64
+    let sampleRate = notetofreq(module.note.float64) * (synthInfos.waveDims.x * synthInfos.oversample).float64
     var filterCutoff = 5 * pow(10, module.cutoffEnvelope.peak * 3)
     filterCutoff = min(sampleRate/2, filterCutoff)
     # module.filter = new BqFilter
-    module.setBqFilter(filterCutoff, module.qEnvelope.peak)
+    module.setBqFilter(filterCutoff, module.qEnvelope.peak, synthInfos)
     return module
 
 proc processBqFilter*(module: FastBqFilterModule, x: float64): float64 =
@@ -123,17 +124,17 @@ proc processBqFilter*(module: FastBqFilterModule, x: float64): float64 =
     module.filter.z2 = x * module.filter.a2 - module.filter.b2 * output
     return output
 
-method synthesize*(module: FastBqFilterModule, x: float64, pin: int): float64 =
+method synthesize*(module: FastBqFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
 
     if(module.update):
-        let sampleRate = notetofreq(module.note.float64) * (synthContext.waveDims.x * synthContext.oversample).float64
-        let mCutoff = if(module.useCutoffEnvelope): module.cutoffEnvelope.doAdsr() else: module.cutoffEnvelope.peak
-        let mResonance = if(module.useQEnvelope): module.qEnvelope.doAdsr() else: module.qEnvelope.peak
+        let sampleRate = notetofreq(module.note.float64) * (synthInfos.waveDims.x * synthInfos.oversample).float64
+        let mCutoff = module.cutoffEnvelope.doAdsr(synthInfos.macroFrame)
+        let mResonance = module.qEnvelope.doAdsr(synthInfos.macroFrame)
         var filterCutoff = 5 * pow(10, mCutoff * 3)
         filterCutoff = min(sampleRate/2, filterCutoff)
-        module.setBqFilter(filterCutoff, mResonance)
+        module.setBqFilter(filterCutoff, mResonance, synthInfos)
         module.min = 0
         module.max = 0
         if(moduleA == nil):
@@ -142,14 +143,14 @@ method synthesize*(module: FastBqFilterModule, x: float64, pin: int): float64 =
         else:
             # Preheat
             for a in 0..<11:
-                for i in 0..<(synthContext.waveDims.x * synthContext.oversample).int:
-                    let ratio = i.float64 / (synthContext.waveDims.x * synthContext.oversample).float64
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+                for i in 0..<(synthInfos.waveDims.x * synthInfos.oversample).int:
+                    let ratio = i.float64 / (synthInfos.waveDims.x * synthInfos.oversample).float64
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList, synthInfos)
                     discard module.processBqFilter(val)
 
-            for i in 0..<(synthContext.waveDims.x * synthContext.oversample).int:
-                    let ratio = i.float64 / (synthContext.waveDims.x * synthContext.oversample).float64
-                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex)
+            for i in 0..<(synthInfos.waveDims.x * synthInfos.oversample).int:
+                    let ratio = i.float64 / (synthInfos.waveDims.x * synthInfos.oversample).float64
+                    let val = moduleA.synthesize((ratio.float64 * PI * 2), module.inputs[0].pinIndex, moduleList, synthInfos)
                     let res = module.processBqFilter(val)
                     module.buffer[i] = res
                     module.max = max(module.max, res)
@@ -158,7 +159,7 @@ method synthesize*(module: FastBqFilterModule, x: float64, pin: int): float64 =
         module.update = false
 
     if(moduleA == nil): return 0.0
-    let delta = 1.0 / (synthContext.waveDims.x * synthContext.oversample).float64
+    let delta = 1.0 / (synthInfos.waveDims.x * synthInfos.oversample).float64
     let output = module.buffer[math.floor(moduloFix(x / (2 * PI), 1)/delta).int] 
     if(module.normalize):
         let norm = max(abs(module.max), abs(module.min))

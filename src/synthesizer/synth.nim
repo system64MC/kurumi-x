@@ -1,23 +1,24 @@
 import math
 import modules/module
 import utils/utils
+import synthInfos
+import genericSynth
 
 # We want at most 256 modules.
 const GRID_SIZE_X* = 16
 const GRID_SIZE_Y* = 16
 
-type
-    
 
-    Synth* = object
+
+
+type    
+    Synth* = ref object of GenericSynth
         moduleList*: array[GRID_SIZE_X * GRID_SIZE_Y, SynthModule]
-        waveDims*: VecI32 = VecI32(x: 32, y: 15)
-        oversample*: int32 = 4
         outputIndex*: uint16 = 1
-        macroLen*: int32 = 64
-        macroFrame*: int32 = 0
-    
-    outWave = seq[int32]
+        # outputFloat*: array[4096 * 8, float64]
+        # outputInt*: array[4096, int32]
+
+    # outWave = seq[int32]
 
 
 

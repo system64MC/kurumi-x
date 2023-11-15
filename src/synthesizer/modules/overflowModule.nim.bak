@@ -1,6 +1,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -14,7 +15,7 @@ proc constructOverflowModule*(): OverflowModule =
 
 method synthesize*(module: OverflowModule, x: float64, pin: int): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = synthInfos.moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil):
         return 0.0 
     else:

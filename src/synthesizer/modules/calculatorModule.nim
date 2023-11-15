@@ -1,8 +1,10 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import mathexpr
 import math
+import ../synthInfos
 
 type
     CalculatorModule* = ref object of SynthModule
@@ -32,18 +34,18 @@ proc avg(args: seq[float]): float =
 proc myClamp(args: seq[float]): float =
     return clamp(args[1], args[0], args[2])
 
-method synthesize(module: CalculatorModule, x: float64, pin: int): float64 =
+method synthesize(module: CalculatorModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
 
     var varArray: array[4, float64]
     for i in 0..<module.inputs.len:
         if(module.inputs[i].moduleIndex < 0):
             varArray[i] = 0
             continue
-        let moduleA = synthContext.moduleList[module.inputs[i].moduleIndex]
+        let moduleA = moduleList[module.inputs[i].moduleIndex]
         if(moduleA == nil):
             varArray[i] = 0
             continue
-        varArray[i] = moduleA.synthesize(x, pin)
+        varArray[i] = moduleA.synthesize(x, pin, moduleList, synthInfos)
     let e = newEvaluator()
 
     e.addVars(
@@ -55,10 +57,10 @@ method synthesize(module: CalculatorModule, x: float64, pin: int): float64 =
             
             "x": x,
             "fb": module.prev,
-            "wl": synthContext.waveDims.x.float,
-            "wh": synthContext.waveDims.y.float,
-
-            "env": module.envelope.doAdsr(),
+            "wl": synthInfos.waveDims.x.float,
+            "wh": synthInfos.waveDims.y.float,
+            # TODO : support macro
+            "env": module.envelope.doAdsr(synthInfos.macroFrame),
             "est": module.envelope.start.float64,
             "ea1": module.envelope.attack.float64,
             "ep1": module.envelope.peak.float64,
@@ -76,8 +78,8 @@ method synthesize(module: CalculatorModule, x: float64, pin: int): float64 =
     proc synth(args: seq[float]): float =
         if(args[0].int > 3 or args[0].int < 0): return 0
         if(module.inputs[args[0].int].moduleIndex < 0): return 0
-        let moduleA = synthContext.moduleList[module.inputs[args[0].int].moduleIndex]
-        if(moduleA == nil): return 0 else: return moduleA.synthesize(args[1], pin)
+        let moduleE = moduleList[module.inputs[args[0].int].moduleIndex]
+        if(moduleE == nil): return 0 else: return moduleE.synthesize(args[1], pin, moduleList, synthInfos)
 
     e.addFunc("synth", synth, 2)
     e.addFunc("clamp", myClamp, 3)

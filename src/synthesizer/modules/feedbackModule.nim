@@ -1,6 +1,7 @@
 # import module
 # import ../globals
 # import ../utils/utils
+import ../synthInfos
 # import math
 
 # type
@@ -22,7 +23,7 @@
 #     return ((a mod b) + b) mod b
 # method synthesize(module: FeedbackModule, x: float64): float64 =
 #     if(module.inputs[0].moduleIndex < 0): return 0
-#     let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+#     let moduleA = moduleList[module.inputs[0].moduleIndex]
 
 #     var x1 = 0.0
 #     var res = 0.0
@@ -56,6 +57,7 @@
 import module
 import ../globals
 import ../utils/utils
+import ../synthInfos
 import math
 
 type
@@ -63,9 +65,9 @@ type
         fbEnvelope*: Adsr = Adsr(peak: 0)
         useAdsr*: bool
         # feedback*: float32
-        prev: float64
-        curr: float64
-        buffer: array[1 shl 15, float64]
+        prev*: float64
+        curr*: float64
+        buffer*: array[1 shl 15, float64]
 
 proc constructFeedbackModule*(): FeedbackModule =
     var module = new FeedbackModule
@@ -75,16 +77,16 @@ proc constructFeedbackModule*(): FeedbackModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: FeedbackModule, x: float64, pin: int): float64 =
+method synthesize(module: FeedbackModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
-    let moduleA = synthContext.moduleList[module.inputs[0].moduleIndex]
+    let moduleA = moduleList[module.inputs[0].moduleIndex]
 
     var x1 = 0.0
     var res = 0.0
-    const delta = 1.0 / 4096.0
+    const delta = 1.0 / 4096.0*9
     var phase = 0.0
 
-    let fb = if(module.useAdsr): module.fbEnvelope.doAdsr() else: module.fbEnvelope.peak
+    let fb = module.fbEnvelope.doAdsr(synthInfos.macroFrame)
 
     if(module.update):
         if(moduleA == nil):
@@ -94,10 +96,10 @@ method synthesize(module: FeedbackModule, x: float64, pin: int): float64 =
                 x1 += delta
         else:
             while(x1 < PI * 4):
-                phase += delta + (moduleA.synthesize(phase, module.inputs[0].pinIndex) - (module.prev.float64)) * fb
+                phase += delta + (moduleA.synthesize(phase, module.inputs[0].pinIndex, moduleList, synthInfos) - (module.prev.float64)) * fb
                 # res = moduleA.synthesize(x1 + module.prev * (module.feedback / 4))
                 module.prev = res
-                res = moduleA.synthesize(phase, module.inputs[0].pinIndex)
+                res = moduleA.synthesize(phase, module.inputs[0].pinIndex, moduleList, synthInfos)
                 module.buffer[(moduloFix(x1, PI * 2) / delta).int] = res
                 x1 += delta
         module.update = false
