@@ -25,7 +25,7 @@ method synthesize(module: QuantizerModule, x: float64, pin: int, moduleList: arr
     if(moduleA == nil): 
         return 0.0
 
-    let quantization = if(module.useAdsr): module.quantizationEnvelope.doAdsr(synthInfos.macroFrame) else: module.quantizationEnvelope.peak
+    let quantization = module.quantizationEnvelope.doAdsr(synthInfos.macroFrame)
 
     if(quantization >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)
 

@@ -41,7 +41,8 @@ import modules/[
     fastChebyshevFilterModule,
     boxModule,
     avgFilterModule,
-    waveShaperModule
+    waveShaperModule,
+    expPlusModule
 ]
 
 
@@ -88,3 +89,4 @@ export fastChebyshevFilterModule
 export boxModule
 export avgFilterModule
 export waveShaperModule
+export expPlusModule

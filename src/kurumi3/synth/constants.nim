@@ -1,0 +1,1 @@
+const NB_OPS* = 8

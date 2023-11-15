@@ -1,9 +1,11 @@
-import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
-import nimgl/[opengl, glfw]
+import imgui
 import ../synthesizer/globals
 import math
 import ../synthesizer/synthesizeWave
 import history
+import strformat
+import ../synthesizer/globals
+when defined(emscripten): import jsbind.emscripten
 # import nimclipboard/libclipboard
 
 # proc drawOscilloscope(module: SynthModule, index: int): void {.inline.} =
@@ -69,15 +71,23 @@ proc drawOutputWindow*(): void {.inline.} =
         registerHistoryEvent("Change sequence index")
 
     if(igButton("Copy current wave str")):
-        igSetClipboardText(synthContext.generateWaveStr().cstring)
-
+        when not defined(emscripten): 
+            igSetClipboardText(synthContext.generateWaveStr().cstring)
+        else:
+            setClipboardText(synthContext.generateWaveStr())
     igSameLine()
     if(igButton("Copy current wave str (HEX)")):
-        igSetClipboardText(synthContext.generateWaveStr(true).cstring)
+        when not defined(emscripten): 
+            igSetClipboardText(synthContext.generateWaveStr(true).cstring)
+        else:
+            setClipboardText(synthContext.generateWaveStr(true))
 
     igSameLine()
     if(igButton("Copy sequence string")):
-        igSetClipboardText(synthContext.generateSeqStr().cstring)
+        when not defined(emscripten): 
+            igSetClipboardText(synthContext.generateSeqStr().cstring)
+        else:
+            setClipboardText(synthContext.generateSeqStr())
     
     igEnd()
     return

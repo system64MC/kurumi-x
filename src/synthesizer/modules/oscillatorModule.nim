@@ -65,7 +65,7 @@ proc constructSquareOscillatorModule*(): SquareOscillatorModule =
 method synthesize(module: SquareOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     let myMult = module.getMult()
     let val = (x * myMult / (PI * 2)) + (module.phase + module.getPhase(synthInfos.macroFrame, synthInfos.macroLen))
-    let duty = if(module.useAdsr): module.dutyEnvelope.doAdsr(synthInfos.macroFrame) else: module.dutyEnvelope.peak
+    let duty = module.dutyEnvelope.doAdsr(synthInfos.macroFrame)
     return if(moduloFix(val, 1) < (duty)): 1 else: -1
 
 
@@ -111,6 +111,9 @@ method refreshWaveform*(module: WavetableOscillatorModule) {.base.} =
         module.maxSample = 0
         module.minSample = 0
 
+func `%`(a, b: int): int = 
+    let tmp = (a mod b) + b
+    return tmp mod b
 method interpolate(module: WavetableOscillatorModule, x: float64): float64 {.base.} =
     let x2 = x * module.wavetable.len.float64
     let len = module.wavetable.len.float64
@@ -124,7 +127,21 @@ method interpolate(module: WavetableOscillatorModule, x: float64): float64 {.bas
         let s1 = (module.wavetable[moduloFix(idx + 1, len).int].float64 / (module.maxSample.float64 / 2)) - 1.0
         return s0 + mu*s1 - (mu * s0)
     of CUBIC:
-        return 0
+        let
+            s0 = (module.wavetable[(idx.int - 1) % len.int].float64 / (module.maxSample.float64 / 2)) - 1
+            s1 = (module.wavetable[(idx.int + 0) % len.int].float64 / (module.maxSample.float64 / 2)) - 1
+            s2 = (module.wavetable[(idx.int + 1) % len.int].float64 / (module.maxSample.float64 / 2)) - 1
+            s3 = (module.wavetable[(idx.int + 2) % len.int].float64 / (module.maxSample.float64 / 2)) - 1
+
+            mu = x2 - idx.float64
+            mu2 = mu * mu
+            
+            a0 = -0.5*s0 + 1.5*s1 - 1.5*s2 + 0.5*s3
+            a1 = s0 - 2.5*s1 + 2*s2 - 0.5*s3
+            a2 = -0.5*s0 + 0.5*s2
+            a3 = s1
+
+        return (a0*mu*mu2 + a1*mu2 + a2*mu + a3)
     
 
 method synthesize(module: WavetableOscillatorModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =

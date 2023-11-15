@@ -20,10 +20,7 @@ method synthesize*(module: SyncModule, x: float64, pin: int, moduleList: array[2
     let moduleA = moduleList[module.inputs[0].moduleIndex]
     if(moduleA == nil): 
         return 0 else:
-            if(not module.useAdsr): 
-                return moduleA.synthesize(moduloFix(x * module.envelope.peak.float64, 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
-            else:
-                return moduleA.synthesize(moduloFix(x * module.envelope.doAdsr(synthInfos.macroFrame), 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
+            return moduleA.synthesize(moduloFix(x * module.envelope.doAdsr(synthInfos.macroFrame), 2 * PI), module.inputs[0].pinIndex, moduleList, synthInfos)
 
 import ../serializationObject
 import flatty

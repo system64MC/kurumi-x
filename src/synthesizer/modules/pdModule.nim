@@ -28,8 +28,8 @@ method synthesize*(module: PdModule, x: float64, pin: int, moduleList: array[256
         return 0 
     else:
         
-        let distortX = if(not module.useAdsrX): module.xEnvelope.peak else: module.xEnvelope.doAdsr(synthInfos.macroFrame)
-        let distortY = if(not module.useAdsrY): module.yEnvelope.peak else: module.yEnvelope.doAdsr(synthInfos.macroFrame)
+        let distortX = module.xEnvelope.doAdsr(synthInfos.macroFrame)
+        let distortY = module.yEnvelope.doAdsr(synthInfos.macroFrame)
 
         if(x < distortX * 2 * PI): 
             # moduleA.synthesize(linearInterpolation(0, module.distortY, module.distortX, 1.0, x))

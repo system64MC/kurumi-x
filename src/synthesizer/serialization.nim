@@ -55,22 +55,25 @@ type
         macroFrame*: int32
 
 proc saveState*() =
-    var obj: SynthSerializeObject
-    obj.waveDims = synthContext.synthInfos.waveDims
-    obj.oversample = synthContext.synthInfos.oversample
-    obj.outputIndex = synthContext.outputIndex
-    obj.macroLen = synthContext.synthInfos.macroLen
-    obj.macroFrame = synthContext.synthInfos.macroFrame
+    when not defined(emscripten):
+        var obj: SynthSerializeObject
+        obj.waveDims = synthContext.synthInfos.waveDims
+        obj.oversample = synthContext.synthInfos.oversample
+        obj.outputIndex = synthContext.outputIndex
+        obj.macroLen = synthContext.synthInfos.macroLen
+        obj.macroFrame = synthContext.synthInfos.macroFrame
 
-    for n in 0..<synthContext.moduleList.len:
-        let m = synthContext.moduleList[n]
-        if(m == nil):
-            obj.moduleList[n] = ModuleSerializationObject(mType: NULL, data: "")
-            continue
-        obj.moduleList[n] = m.serialize()
+        for n in 0..<synthContext.moduleList.len:
+            let m = synthContext.moduleList[n]
+            if(m == nil):
+                obj.moduleList[n] = ModuleSerializationObject(mType: NULL, data: "")
+                continue
+            obj.moduleList[n] = m.serialize()
 
-    let str = "VAMPIRE " & compress(toFlatty(obj))
-    writeFile("backup.bak", str)
+        let str = "VAMPIRE " & compress(toFlatty(obj))
+        writeFile("backup.bak", str)
+    else:
+        return
 
 proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
     var module: SynthModule
@@ -174,13 +177,15 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             return moduleBox
         of AVG_FILTER:
             module = mData.data.fromFlatty(AvgFilterModule)
+        of WAVE_SHAPER:
+            module = mData.data.fromFlatty(WaveShaperModule)
         else:
             module = nil
     return module       
 
 var moduleClipboard*: ModuleSerializationObject
 
-proc unserializeModules(synth: ref Synth, data: SynthSerializeObject) =
+proc unserializeModules(synth: Synth, data: SynthSerializeObject) =
     for i in 0..<data.moduleList.len:
         let mData = data.moduleList[i]
         synth.moduleList[i] = mData.unserializeModule()
@@ -206,7 +211,7 @@ proc loadState*() =
         echo "error"
         return
 
-proc saveStateHistory*(synth: ref Synth): string =
+proc saveStateHistory*(synth: Synth): string =
     var obj: SynthSerializeObject
     obj.waveDims = synthContext.synthInfos.waveDims
     obj.oversample = synthContext.synthInfos.oversample
@@ -224,11 +229,11 @@ proc saveStateHistory*(synth: ref Synth): string =
     let str = "VAMPIRE " & compress(toFlatty(obj))
     return str
 
-proc loadStateHistory*(data: string): ref Synth =
+proc loadStateHistory*(data: string): Synth =
     let str = data
     if(str.substr(0, "VAMPIRE ".len - 1) != "VAMPIRE "): return
     let data = str.substr("VAMPIRE ".len).uncompress().fromFlatty(SynthSerializeObject)
-    var synth = (ref Synth)()
+    var synth = (Synth)()
     # let data = str.fromFlatty(SynthSerializeObject)
     synth.synthInfos.waveDims = data.waveDims
     synth.synthInfos.oversample = data.oversample

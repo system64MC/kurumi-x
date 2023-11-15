@@ -22,7 +22,7 @@ proc constructAvgFilterModule*(): AvgFilterModule =
 const LENGTH = 4096.0
 
 method synthesize*(module: AvgFilterModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
-    let window = (if(module.useAdsr): module.envelope.doAdsr(synthInfos.macroFrame).floor else: module.envelope.peak.floor).int
+    let window = module.envelope.doAdsr(synthInfos.macroFrame).floor.int
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
 

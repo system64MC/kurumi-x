@@ -1,5 +1,5 @@
-import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
-import nimgl/[opengl, glfw]
+import imgui
+
 import moduleCreateMenu
 import moduleDraw
 import ../synthesizer/synth
@@ -29,7 +29,9 @@ proc `+`(vec1, vec2: ImVec2): ImVec2 =
 var scrollPoint = ImVec2()
 
 proc drawGrid*(): void {.inline.} =
-
+    var style = igGetStyle().colors[ImGuiCol.ChildBg.int].addr
+    let alpha = style.w
+    style.w = 0
     if(igBeginTable("table", GRID_SIZE_X.int32, (ImGuiTableFlags.SizingFixedSame.int or ImGuiTableFlags.ScrollX.int or ImGuiTableFlags.ScrollY.int).ImGuiTableFlags)):
         for i in 0..<GRID_SIZE_Y:
             igTableNextRow()
@@ -50,8 +52,11 @@ proc drawGrid*(): void {.inline.} =
         scrollPoint.x = igGetScrollX()
         scrollPoint.y = igGetScrollY()
         igEndTable()
-    
+    style.w = alpha
+
     # Drawing links
+    # var style = igGetStyleColorVec4(ImGuiCol.ChildBg)[]
+    
     var dl = igGetWindowDrawList()
     var winPos = ImVec2()
     igGetWindowPosNonUDT(winPos.addr)
@@ -94,3 +99,4 @@ proc drawGrid*(): void {.inline.} =
         if(igIsMouseDoubleClicked(ImGuiMouseButton.Left)):
             selectedLink.moduleIndex = -1
             selectedLink.pinIndex = -1
+    

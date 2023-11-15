@@ -16,8 +16,8 @@ proc registerHistoryEvent*(eventName: string): void =
     let e = HistoryEvent(eventName: eventName, synthState: synthContext.saveStateHistory())
     history.historyStack[history.historyStack.len - 1] = e
     history.historyPointer = history.historyStack.len - 1
-    echo eventName
-    echo history.historyStack.len
+    # echo eventName
+    # echo history.historyStack.len
 
 proc undo*(): void =
     history.historyPointer.dec

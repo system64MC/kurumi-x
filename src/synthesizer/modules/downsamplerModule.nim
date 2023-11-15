@@ -24,7 +24,7 @@ method synthesize(module: DownsamplerModule, x: float64, pin: int, moduleList: a
     if(moduleA == nil): 
         return 0.0
 
-    let downsample = if(module.useAdsr): module.downsampleEnvelope.doAdsr(synthInfos.macroFrame) else: module.downsampleEnvelope.peak
+    let downsample = module.downsampleEnvelope.doAdsr(synthInfos.macroFrame)
 
     if(downsample >= 1): return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)
 

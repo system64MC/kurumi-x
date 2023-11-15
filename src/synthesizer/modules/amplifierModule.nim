@@ -20,8 +20,6 @@ proc constructAmplifierModule*(): AmplifierModule =
 method synthesize*(module: AmplifierModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     if(module.inputs[0].moduleIndex < 0): return 0
     let moduleA = moduleList[module.inputs[0].moduleIndex]
-    if(not module.useAdsr):
-        if(moduleA == nil): return 0 else: return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos) * module.envelope.peak
     if(moduleA == nil): return 0 else: return moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos) * module.envelope.doAdsr(synthInfos.macroFrame)
     
 import ../serializationObject

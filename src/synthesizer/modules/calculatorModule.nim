@@ -59,7 +59,7 @@ method synthesize(module: CalculatorModule, x: float64, pin: int, moduleList: ar
             "fb": module.prev,
             "wl": synthInfos.waveDims.x.float,
             "wh": synthInfos.waveDims.y.float,
-
+            # TODO : support macro
             "env": module.envelope.doAdsr(synthInfos.macroFrame),
             "est": module.envelope.start.float64,
             "ea1": module.envelope.attack.float64,

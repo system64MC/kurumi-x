@@ -2,6 +2,7 @@ import math
 import modules/module
 import utils/utils
 import synthInfos
+import genericSynth
 
 # We want at most 256 modules.
 const GRID_SIZE_X* = 16
@@ -11,14 +12,13 @@ const GRID_SIZE_Y* = 16
 
 
 type    
-    Synth* = object
+    Synth* = ref object of GenericSynth
         moduleList*: array[GRID_SIZE_X * GRID_SIZE_Y, SynthModule]
         outputIndex*: uint16 = 1
-        synthInfos*: SynthInfos = SynthInfos()
-        outputFloat*: array[4096 * 8, float64]
-        outputInt*: array[4096, int32]
+        # outputFloat*: array[4096 * 8, float64]
+        # outputInt*: array[4096, int32]
 
-    outWave = seq[int32]
+    # outWave = seq[int32]
 
 
 

@@ -34,7 +34,7 @@ method synthesize*(module: MorphModule, x: float64, pin: int, moduleList: array[
     if(moduleA != nil): valA = moduleA.synthesize(x, module.inputs[0].pinIndex, moduleList, synthInfos)
     if(moduleB != nil): valB = moduleB.synthesize(x, module.inputs[1].pinIndex, moduleList, synthInfos)
 
-    return lerp(valA, valB, if(not module.useAdsr): module.envelope.peak else: module.envelope.doAdsr(synthInfos.macroFrame))
+    return lerp(valA, valB, module.envelope.doAdsr(synthInfos.macroFrame))
 
 import ../serializationObject
 import flatty

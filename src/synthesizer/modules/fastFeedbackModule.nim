@@ -100,7 +100,7 @@ method synthesize(module: FastFeedbackModule, x: float64, pin: int, moduleList: 
             return 0
         else:
             let l = synthInfos.waveDims.x * synthInfos.oversample
-            let fb = if(module.useAdsr): module.fbEnvelope.doAdsr(synthInfos.macroFrame) else: module.fbEnvelope.peak
+            let fb = module.fbEnvelope.doAdsr(synthInfos.macroFrame)
             var output = 0.0
             for i in 0..<l:
                 let x1 = (i.float64 * PI * 2) / l.float64

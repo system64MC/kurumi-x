@@ -1,5 +1,4 @@
-import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
-import nimgl/[opengl, glfw]
+import imgui
 import ../synthesizer/synth
 import ../synthesizer/linkManagement
 import ../synthesizer/synthesizeWave
@@ -346,6 +345,12 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         moduleList[cellIndex] = constructExpModule()
         synthContext.synthesize()
         registerHistoryEvent("Created Exponenter Module")
+
+    if(igMenuItem("Exp. Plus")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructExpPlusModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created Exp. Plus Module")
 
     # if(igMenuItem("Overflower")):
     #     oldModule.breakAllLinks(moduleList)

@@ -1,12 +1,12 @@
-import globals
+# import globals
 import modules/outputModule
 import modules/boxModule
 import modules/module
 import math
 import strutils
-import print
+# import print
 # import kissfft/kissfft
-import fourierTransform
+# import fourierTransform
 import resampling
 import synth
 
@@ -17,7 +17,7 @@ proc update(moduleList: array[256, SynthModule]): void =
         if(m of BoxModule):
             echo "Updating Box"
             update((m.BoxModule).moduleList)
-proc synthesize*(synth: ref Synth): void =
+proc synthesize*(synth: Synth): void =
 
     # for m in synth.moduleList:
     #     if(m == nil): continue
@@ -27,7 +27,7 @@ proc synthesize*(synth: ref Synth): void =
     # print(synth)
 
     let outModule = synth.moduleList[synth.outputIndex].OutputModule
-    echo outModule.inputs[0].pinIndex
+    # echo outModule.inputs[0].pinIndex
 
     let overSampleValue = 1.0/synth.synthInfos.oversample.float64
 
@@ -51,7 +51,7 @@ proc synthesize2*(synth: var Synth): void =
     # print(synth)
 
     let outModule = synth.moduleList[synth.outputIndex].OutputModule
-    echo outModule.inputs[0].pinIndex
+    # echo outModule.inputs[0].pinIndex
 
     let overSampleValue = 1.0/synth.synthInfos.oversample.float64
 
@@ -64,7 +64,7 @@ proc synthesize2*(synth: var Synth): void =
 
     resample()
 
-proc generateWaveStr*(synth: ref Synth, hex: bool = false): string =
+proc generateWaveStr*(synth: Synth, hex: bool = false): string =
     var str = ""
     for i in 0..<synth.synthInfos.waveDims.x:
         if(hex):
@@ -76,7 +76,7 @@ proc generateWaveStr*(synth: ref Synth, hex: bool = false): string =
 
     return str & ";"
 
-proc generateSeqStr*(synth: ref Synth, hex: bool = false): string =
+proc generateSeqStr*(synth: Synth, hex: bool = false): string =
     let macroBackup = synth.synthInfos.macroFrame
     var outStr = ""
     for mac in 0..<synth.synthInfos.macroLen:

@@ -130,8 +130,8 @@ method synthesize*(module: FastBqFilterModule, x: float64, pin: int, moduleList:
 
     if(module.update):
         let sampleRate = notetofreq(module.note.float64) * (synthInfos.waveDims.x * synthInfos.oversample).float64
-        let mCutoff = if(module.useCutoffEnvelope): module.cutoffEnvelope.doAdsr(synthInfos.macroFrame) else: module.cutoffEnvelope.peak
-        let mResonance = if(module.useQEnvelope): module.qEnvelope.doAdsr(synthInfos.macroFrame) else: module.qEnvelope.peak
+        let mCutoff = module.cutoffEnvelope.doAdsr(synthInfos.macroFrame)
+        let mResonance = module.qEnvelope.doAdsr(synthInfos.macroFrame)
         var filterCutoff = 5 * pow(10, mCutoff * 3)
         filterCutoff = min(sampleRate/2, filterCutoff)
         module.setBqFilter(filterCutoff, mResonance, synthInfos)

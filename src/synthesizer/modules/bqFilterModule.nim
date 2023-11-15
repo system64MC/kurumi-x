@@ -131,8 +131,8 @@ method synthesize*(module: BqFilterModule, x: float64, pin: int, moduleList: arr
 
     if(module.update):
         let sampleRate = notetofreq(module.note.float64) * LENGTH
-        let mCutoff = if(module.useCutoffEnvelope): module.cutoffEnvelope.doAdsr(synthInfos.macroFrame) else: module.cutoffEnvelope.peak
-        let mResonance = if(module.useQEnvelope): module.qEnvelope.doAdsr(synthInfos.macroFrame) else: module.qEnvelope.peak
+        let mCutoff = module.cutoffEnvelope.doAdsr(synthInfos.macroFrame)
+        let mResonance = module.qEnvelope.doAdsr(synthInfos.macroFrame)
         var filterCutoff = 5 * pow(10, mCutoff * 3)
         filterCutoff = min(sampleRate/2, filterCutoff)
         module.setBqFilter(filterCutoff, mResonance)
@@ -161,7 +161,7 @@ method synthesize*(module: BqFilterModule, x: float64, pin: int, moduleList: arr
 
     if(moduleA == nil): return 0.0
     let delta = 1.0 / LENGTH
-    let output = module.buffer[math.floor(moduloFix(x / (2 * PI), 1)/delta).int] 
+    let output = module.buffer[math.floor(moduloFix(x / (2 * PI), 1)/delta).int]
     if(module.normalize):
         let norm = max(abs(module.max), abs(module.min))
         if norm == 0: return output
