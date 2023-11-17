@@ -1,5 +1,6 @@
 import imgui
-import ../../synthesizer/globals
+import ../../common/globals
+import ../../common/exportFile
 import kurumi3OutputWindow
 import kurumi3GeneralSettings
 import kurumi3Matrix
@@ -7,7 +8,9 @@ import kurumi3Filters
 import kurumi3Operators
 import kurumi3History
 import ../synth/kvpLoader
+import ../synth/serialization
 when defined(emscripten): import jsbind/emscripten
+when not defined(emscripten): import std/threadpool
 
 when defined(emscripten):
     proc myMalloc*(size: uint32): uint32 {.EMSCRIPTEN_KEEPALIVE, cdecl.} =
@@ -97,6 +100,90 @@ proc drawKurumi*(): void {.inline.} =
             if(igMenuItem("Load KVP")):
                 when defined(emscripten): loadKvp()
                 else: discard
+            if(igBeginMenu("Export")):
+                # var m = createMaster()
+                if(igBeginMenu(".WAV")):
+                    if(igMenuItem("8-Bits .WAV")):
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        when not defined(emscripten):
+                            spawn(saveWav(data, 8, false))
+                        else: saveWav(data, 8, false)
+                        # saveWav(data, 8, false)
+                    if(igMenuItem("8-Bits .WAV (Sequence)")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+
+                        when not defined(emscripten):
+                            spawn(saveWav(data, 8, true))
+                        else: saveWav(data, 8, true)
+                        # saveWav(data, 8, true)
+                    if(igMenuItem("16-Bits .WAV")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        when not defined(emscripten):
+                            spawn(saveWav(data, 16, false))
+                        else: saveWav(data, 16, false)
+                        # saveWav(data, 16, false)
+                    if(igMenuItem("16-Bits .WAV (Sequence)")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        when not defined(emscripten):
+                            spawn(saveWav(data, 16, true))
+                        else: saveWav(data, 16, true)
+                        # saveWav(data, 16, true)
+                    igEndMenu()
+
+                if(igBeginMenu("SunVox")):
+                    if(igMenuItem("Generator")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        when not defined(emscripten):
+                            spawn(saveGenerator(data))
+                        else: saveGenerator(data)
+                    if(igMenuItem("Analog Generator")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        when not defined(emscripten):
+                            spawn(saveAnalogGenerator(data))
+                        else: saveAnalogGenerator(data)
+                    if(igMenuItem("FMX")):
+                        # let data = k3history.historyStack[k3history.historyPointer].synthState
+                        let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                        when not defined(emscripten):
+                            spawn(saveFMX(data))
+                        else: saveFMX(data)
+                    # if(igMenuItem("16-Bits .WAV")):
+                    #     let data = k3history.historyStack[k3history.historyPointer].synthState
+                    #     when not defined(emscripten):
+                    #         spawn(saveWav(data, 16, false))
+                    #     else: saveWav(data, 16, false)
+                    # if(igMenuItem("16-Bits .WAV (Sequence)")):
+                    #     let data = k3history.historyStack[k3history.historyPointer].synthState
+                    #     when not defined(emscripten):
+                    #         spawn(saveWav(data, 16, true))
+                    #     else: saveWav(data, 16, true)
+                    igEndMenu()
+                
+                if(igMenuItem("Dn-Famitracker (N163)")):
+                    # let data = k3history.historyStack[k3history.historyPointer].synthState
+                    let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                    when not defined(emscripten): spawn data.saveN163(false)
+                    else: data.saveN163(false)
+                if(igMenuItem("Dn-Famitracker (N163, with sequence)")):
+                    # let data = k3history.historyStack[k3history.historyPointer].synthState
+                    let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                    when not defined(emscripten): spawn data.saveN163(true)
+                    else: data.saveN163(true)
+                if(igMenuItem("Furnace Wave (FUW)")):
+                    # let data = k3history.historyStack[k3history.historyPointer].synthState
+                    let data = loadStateHistory(k3history.historyStack[k3history.historyPointer].synthState)
+                    when not defined(emscripten): spawn data.saveFUW()
+                    else: data.saveFUW()
+                if(igMenuItem("Deflemask Wave (DMW)")):
+                    saveDMW()
+                igEndMenu()
+
             igEndMenu()
         if(igBeginMenu("Action")):
 

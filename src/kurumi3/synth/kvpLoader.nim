@@ -2,7 +2,7 @@ import json
 import globals
 import kurumi3synth
 import operator
-import ../../synthesizer/utils/utils
+import ../../common/utils
 import stew/base64
 import constants
 

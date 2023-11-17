@@ -1,14 +1,14 @@
-import ../gui/appGui
+import ../kurumiX/gui/appGui
 import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
 # import nimgl/[opengl, glfw]
 import opengl
 import nglfw
-import ../synthesizer/globals
-import ../synthesizer/modules/outputModule
-import ../synthesizer/synthesizeWave
-import ../synthesizer/serialization
+import ../common/globals
+import ../kurumiX/synthesizer/modules/outputModule
+import ../kurumiX/synthesizer/synthesizeWave
+import ../kurumiX/synthesizer/serialization
 import std/random
-import ../gui/history
+import ../kurumiX/gui/history
 import ../kurumi3/gui/kurumi3History
 
 import ../kurumi3/gui/kurumi3Gui

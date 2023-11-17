@@ -1,5 +1,5 @@
 import Adsr
-import ../../synthesizer/synthInfos
+import ../../common/synthInfos
 import random
 import strutils
 

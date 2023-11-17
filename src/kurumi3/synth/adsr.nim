@@ -1,4 +1,4 @@
-import ../../synthesizer/constants
+import ../../common/constants
 
 type
     Adsr* = object

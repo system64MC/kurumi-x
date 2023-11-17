@@ -1220,12 +1220,12 @@ var tempI64;
 // === Body ===
 
 var ASM_CONSTS = {
-  585140: ($0) => { navigator.clipboard.writeText(UTF8ToString($0)); },  
- 585191: ($0, $1, $2) => { const a = document.createElement('a'); a.style = 'display:none'; document.body.appendChild(a); var result = new Uint8Array($1); for(var i = 0; i < $1; i++) { result[i] = Module._getByte($0 + i); } var blob = new Blob([result], { type: 'application/octet-stream' }); const url = URL.createObjectURL(blob); a.href = url; const filename = UTF8ToString($2); a.download = filename; a.click(); URL.revokeObjectURL(url); document.body.removeChild(a); },  
- 585639: ($0) => { window.open(UTF8ToString($0)); },  
- 585672: ($0) => { alert(UTF8ToString($0)); },  
- 585699: () => { function uploadFile(file) { var reader = new FileReader(); reader.addEventListener("load", _=> { var data = reader.result; try { var obj = JSON.parse(data); if(obj.Format != "vampire") { alert("Not a Kurumi 3 KVP patch!"); } else { var ptr = _myMalloc(data.length + 1); for(var i = 0; i < data.length; i++ ) { _setByte(ptr + i, data.charCodeAt(i)); } _setByte(ptr + data.length, 0); _ptrToString(ptr); _myFree(ptr); } } catch(err) { alert("Cannot load file : Wrong format or KVP corrupted!"); return; } file = []; }); reader.readAsText(file); } const a = document.createElement('input'); a.type = 'file'; a.addEventListener('change', function(event) { var file = event.target.files[0]; uploadFile(file); event.target.files[0] = []; }); a.style = 'display:none'; document.body.appendChild(a); a.click(); document.body.removeChild(a); },  
- 586536: ($0) => { document.title = UTF8ToString($0) }
+  585172: ($0) => { navigator.clipboard.writeText(UTF8ToString($0)); },  
+ 585223: ($0, $1, $2) => { const a = document.createElement('a'); a.style = 'display:none'; document.body.appendChild(a); var result = new Uint8Array($1); for(var i = 0; i < $1; i++) { result[i] = Module._getByte($0 + i); } var blob = new Blob([result], { type: 'application/octet-stream' }); const url = URL.createObjectURL(blob); a.href = url; const filename = UTF8ToString($2); a.download = filename; a.click(); URL.revokeObjectURL(url); document.body.removeChild(a); },  
+ 585671: ($0) => { window.open(UTF8ToString($0)); },  
+ 585704: ($0) => { alert(UTF8ToString($0)); },  
+ 585731: () => { function uploadFile(file) { var reader = new FileReader(); reader.addEventListener("load", _=> { var data = reader.result; try { var obj = JSON.parse(data); if(obj.Format != "vampire") { alert("Not a Kurumi 3 KVP patch!"); } else { var ptr = _myMalloc(data.length + 1); for(var i = 0; i < data.length; i++ ) { _setByte(ptr + i, data.charCodeAt(i)); } _setByte(ptr + data.length, 0); _ptrToString(ptr); _myFree(ptr); } } catch(err) { alert("Cannot load file : Wrong format or KVP corrupted!"); return; } file = []; }); reader.readAsText(file); } const a = document.createElement('input'); a.type = 'file'; a.addEventListener('change', function(event) { var file = event.target.files[0]; uploadFile(file); event.target.files[0] = []; }); a.style = 'display:none'; document.body.appendChild(a); a.click(); document.body.removeChild(a); },  
+ 586568: ($0) => { document.title = UTF8ToString($0) }
 };
 
 

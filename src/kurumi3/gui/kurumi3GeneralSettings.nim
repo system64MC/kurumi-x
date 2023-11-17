@@ -1,6 +1,6 @@
 import imgui
-import ../../synthesizer/globals
-import ../../synthesizer/synthInfos
+import ../../common/globals
+import ../../common/synthInfos
 import ../synth/globals
 import ../synth/serialization
 import ../synth/kurumi3Synth

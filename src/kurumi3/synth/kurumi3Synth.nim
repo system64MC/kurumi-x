@@ -1,7 +1,7 @@
 import operator
 import adsr
-import ../../synthesizer/synthInfos
-import ../../synthesizer/genericSynth
+import ../../common/synthInfos
+import ../../common/genericSynth
 import constants
 
 type
@@ -194,7 +194,7 @@ proc synthesizeOld(synth: Kurumi3Synth) =
         res /= synth.synthInfos.oversample.float64
         synth.outputInt[c] = (round((res + 1) * (synth.synthInfos.waveDims.y.float64 / 2.0))).int32
 
-proc synthesize*(synth: Kurumi3Synth) =
+method synthesize*(synth: Kurumi3Synth) =
     synth.resetFB()
     echo synth.synthInfos.oversample
     if(synth.normalize < 2):

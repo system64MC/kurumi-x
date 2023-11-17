@@ -598,7 +598,7 @@ proc drawMatrix(): void {.inline.} =
         igEndTable()
     igEndChild()
 
-import ../../synthesizer/globals
+import ../../common/globals
 import math
 proc drawMatrixWindow*(): void {.inline} =
     igBegin("Modulation Matrix")

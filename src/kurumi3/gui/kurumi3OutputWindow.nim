@@ -1,7 +1,7 @@
 import imgui
 import ../synth/globals
 import ../synth/kurumi3Synth
-import ../../synthesizer/globals
+import ../../common/globals
 import kurumi3History
 import math
 
