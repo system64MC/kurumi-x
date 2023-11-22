@@ -1,6 +1,6 @@
 import kurumi3Adsr
-import ../synth/globals
-import ../synth/adsr
+import ../../common/globals
+import ../../common/utils
 import ../synth/kurumi3Synth
 import ../synth/serialization
 import kurumi3History

@@ -5,6 +5,8 @@ import moduleCreateMenu
 import moduleDraw
 import ../../common/exportFile
 import ../../common/globals
+import ../../common/gui
+import ../../common/piano
 import std/os
 import history
 import ../synthesizer/serialization
@@ -133,6 +135,10 @@ proc drawApp*(): void {.inline.} =
                 # synthMode = NONE
                 isSelectorOpen = true
             igEndMenu()
+        if(igBeginMenu("Audio")):
+            igCheckbox("Enable preview", pianState.isOn.addr)
+            igSliderFloat("Preview Volume", pianState.volume.addr, 0.0, 1.0, flags = ImGuiSliderFlags.AlwaysClamp)
+            igEndMenu()
         igEndMainMenuBar()
     
     if(igBegin("Main Rack", nil)):
@@ -140,5 +146,5 @@ proc drawApp*(): void {.inline.} =
     igEnd()
 
     drawOutputWindow()
-
+    synthContext.drawPiano()
   

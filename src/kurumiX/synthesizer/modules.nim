@@ -42,7 +42,8 @@ import modules/[
     boxModule,
     avgFilterModule,
     waveShaperModule,
-    expPlusModule
+    expPlusModule,
+    widthModule,
 ]
 
 
@@ -90,3 +91,4 @@ export boxModule
 export avgFilterModule
 export waveShaperModule
 export expPlusModule
+export widthModule

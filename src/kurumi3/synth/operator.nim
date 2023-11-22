@@ -1,59 +1,83 @@
-import Adsr
+# import Adsr
 import ../../common/synthInfos
+import ../../common/globals
+import ../../common/utils
 import random
 import strutils
 
 type
     Operator* = ref object
         modMode*: int32
-        # modDepth*: float32
         feedback*: float32
         mult*: int32 = 1
         phase*: float32
-
-        # volEnvMode*: int32
-
+        distAdsr*: Adsr = Adsr(mac: @[255], macString: "255", peak: 1.0)
+        distMode*: int32 = 0
         volAdsr*: Adsr
-
         detune*: int32
-        # usePhaseEnv*: bool
-
         morphEnvelope*: Adsr = Adsr(attack: 64, peak: 0)
-        # useMorphing*: bool
-        # morphTime*: int32 = 64
-
-        # dutyCycle*: float32 = 0.5
-            
-        # usePwmEnv*: bool
         pwmEnv*: Adsr = Adsr(peak: 0.5, mac: @[128], macString: "128")
-
         waveform*: int32
         reverseWaveform*: bool
         interpolation*: int32
-
         wavetable*: seq[uint8] = @[16, 25, 30, 31, 30, 29, 26, 25, 25, 28, 31, 28, 18, 11, 10, 13, 17, 20, 22, 20, 15, 6, 0, 2, 6, 5, 3, 1, 0, 0, 1, 4]
         waveStr*: string = "16 25 30 31 30 29 26 25 25 28 31 28 18 11 10 13 17 20 22 20 15 6 0 2 6 5 3 1 0 0 1 4"
         waveMin*: uint8 = 0
         waveMax*: uint8 = 31
-
         morphWave*: seq[uint8] = @[16, 20, 15, 11, 11, 24, 30, 31, 28, 20, 10, 2, 0, 3, 5, 0, 16, 31, 26, 28, 31, 29, 21, 11, 3, 0, 1, 7, 20, 20, 16, 11]
         morphStr*: string = "16 20 15 11 11 24 30 31 28 20 10 2 0 3 5 0 16 31 26 28 31 29 21 11 3 0 1 7 20 20 16 11"
         morphMin*: uint8 = 0
         morphMax*: uint8 = 31
-
         phaseEnv*: Adsr = Adsr(mac: @[0], macString: "0")
-        phaseStr*: string = "0"
+        expEnv*: Adsr = Adsr(peak: 1, mac: @[255], macString: "255")
+        # phaseStr*: string = "0"
         prev*: float64
         curr*: float64
-        # phaseRev*: bool
 
-        # volEnv*: seq[uint8] = @[255]
-        # volStr*: string = "255"
+    OperatorSerialize* = object
+        modMode*: int32
+        feedback*: float32
+        mult*: int32 = 1
+        phase*: float32
+        distAdsr*: AdsrSerialize
+        distMode*: int32
+        volAdsr*: AdsrSerialize
+        detune*: int32
+        morphEnvelope*: AdsrSerialize
+        pwmEnv*: AdsrSerialize
+        waveform*: int32
+        reverseWaveform*: bool
+        interpolation*: int32
+        wavetable*: seq[uint8]
+        morphWave*: seq[uint8]
+        phaseEnv*: AdsrSerialize
+        expEnv*: AdsrSerialize
 
     VolEnvMode* = enum
         NONE,
         ADSR,
         CUSTOM
+
+proc serializeOperator*(op: Operator): OperatorSerialize =
+    return OperatorSerialize(
+        modMode: op.modMode,
+        feedback: op.feedback,
+        mult: op.mult,
+        phase: op.phase,
+        distAdsr: op.distAdsr.serializeAdsr(),
+        distMode: op.distMode,
+        volAdsr: op.volAdsr.serializeAdsr(),
+        detune: op.detune,
+        morphEnvelope: op.morphEnvelope.serializeAdsr(),
+        pwmEnv: op.pwmEnv.serializeAdsr(),
+        waveform: op.waveform,
+        reverseWaveform: op.reverseWaveform,
+        interpolation: op.interpolation,
+        wavetable: op.wavetable,
+        morphWave: op.morphWave,
+        phaseEnv: op.phaseEnv.serializeAdsr(),
+        expEnv: op.expEnv.serializeAdsr()
+    )
 
 import math
 
@@ -201,10 +225,15 @@ proc interpolate(op: Operator, x: float64, wt: seq[byte], min, max: byte): float
 
 func lerp(x, y, a: float64): float64 =
     return x*(1-a) + y*a
+# proc getWTSample(op: Operator, x: float64, infos: SynthInfos): float64 =
+#     let a = op.interpolate(x * op.wavetable.len.float64 * op.getMult() + (op.phase.float64 * op.wavetable.len.float64 + op.getPhase(infos) * op.wavetable.len.float64), op.wavetable, op.waveMin, op.waveMax)
+#     let b = op.interpolate(x * op.morphWave.len.float64 * op.getMult() + (op.phase.float64 * op.morphWave.len.float64 + op.getPhase(infos) * op.morphWave.len.float64), op.morphWave, op.morphMin, op.morphMax)
+#     let c = op.morphEnvelope.doAdsr(infos.macroFrame)
+#     return lerp(a, b, c)
+
 proc getWTSample(op: Operator, x: float64, infos: SynthInfos): float64 =
-    # TODO : Morphing
-    let a = op.interpolate(x * op.wavetable.len.float64 * op.getMult() + (op.phase.float64 * op.wavetable.len.float64 + op.getPhase(infos) * op.wavetable.len.float64), op.wavetable, op.waveMin, op.waveMax)
-    let b = op.interpolate(x * op.morphWave.len.float64 * op.getMult() + (op.phase.float64 * op.morphWave.len.float64 + op.getPhase(infos) * op.morphWave.len.float64), op.morphWave, op.morphMin, op.morphMax)
+    let a = op.interpolate((x / (PI * 2)) * op.wavetable.len.float64, op.wavetable, op.waveMin, op.waveMax)
+    let b = op.interpolate((x / (PI * 2)) * op.morphWave.len.float64, op.morphWave, op.morphMin, op.morphMax)
     let c = op.morphEnvelope.doAdsr(infos.macroFrame)
     return lerp(a, b, c)
 
@@ -214,8 +243,11 @@ func getFB*(op: Operator): float64 =
 # Waveforms
 
     # Sines
+# proc sine(op: Operator, x: float64, infos: SynthInfos): float64 =
+#     return sin((x * op.getMult() * 2 * PI) + ((op.phase.float64) * 2 * PI + (op.getPhase(infos) * PI * 2)))
+
 proc sine(op: Operator, x: float64, infos: SynthInfos): float64 =
-    return sin((x * op.getMult() * 2 * PI) + ((op.phase.float64) * 2 * PI + (op.getPhase(infos) * PI * 2)))
+    return sin(x)
     # (x * op.getMult() * 2 * math.Pi) + (float64(op.Phase)*2*math.Pi + (op.getPhase() * math.Pi * 2))
 
 proc rectSine(op: Operator, x: float64, infos: SynthInfos): float64 =
@@ -226,13 +258,14 @@ proc absSine(op: Operator, x: float64, infos: SynthInfos): float64 =
     return abs(op.sine(x, infos))
 
 proc quarterSine(op: Operator, x: float64, infos: SynthInfos): float64 =
-    if (x * op.getMult() + op.phase.float64 + op.getPhase(infos)) mod 0.5 <= 0.25:
+    if(x mod PI * 0.5 <= PI * 0.25):
+    # if (x * op.getMult() + op.phase.float64 + op.getPhase(infos)) mod 0.5 <= 0.25:
         return op.absSine(x, infos)
     return 0
 
 proc squishedSine(op: Operator, x: float64, infos: SynthInfos): float64 =
     if(op.sine(x, infos) > 0):
-        return sin((x * op.getMult() * 4 * PI) + (op.phase.float64 * 4 * PI + (op.getPhase(infos) * PI * 4)))
+        return sin(x * 2)
     return 0
 
 proc squishedRectSine(op: Operator, x: float64, infos: SynthInfos): float64 =
@@ -245,7 +278,7 @@ proc squishedAbsSine(op: Operator, x: float64, infos: SynthInfos): float64 =
     # Squares
 proc square(op: Operator, x: float64, infos: SynthInfos): float64 =
     let width = op.getDutyCycle(infos)
-    let a = (x * PI * 2 * op.getMult() + (op.phase.float64 * PI * 2 + op.getPhase(infos) * PI * 2)) % (PI * 2)    
+    let a = (x) % (PI * 2)    
     if a >= (PI * width * 2): return -1
     return 1
 
@@ -256,7 +289,7 @@ proc rectSquare(op: Operator, x: float64, infos: SynthInfos): float64 =
 
     # Saws
 proc saw(op: Operator, x: float64, infos: SynthInfos): float64 =
-    return arctan(tan(x * PI * op.getMult() + (op.phase.float64 * PI + (op.getPhase(infos) * PI)))) / (PI * 0.5)
+    return arctan(tan(x / 2)) / (PI * 0.5)
 
 proc rectSaw(op: Operator, x: float64, infos: SynthInfos): float64 =
     let a = op.saw(x, infos)
@@ -324,7 +357,7 @@ proc absTriangle(op: Operator, x: float64, infos: SynthInfos): float64 =
     return abs(op.triangle(x, infos))
 
 proc quarterTriangle(op: Operator, x: float64, infos: SynthInfos): float64 =
-    if (x * op.getMult() + op.phase.float64 + op.getPhase(infos)) mod 0.5 <= 0.25:
+    if (x) mod PI * 0.5 <= PI * 0.25:
         return op.absTriangle(x, infos)
     return 0
 
@@ -461,9 +494,28 @@ const waveFuncs* = [
     cubedRectCustom,
     cubedAbsCustom,
 ]
-
+proc linearInterpolation(x1, y1, x2, y2, x: float64): float64 =
+    let slope = (y2 - y1) / (x2 - x1)
+    return y1 + (slope * (x - x1))  
 proc oscillate*(op: Operator, x: float64, infos: SynthInfos): float64 =
-    return waveFuncs[op.waveform](op, x, infos)
+    let a = op.distAdsr.doAdsr(infos.macroFrame)
+    let e = op.expEnv.doAdsr(infos.macroFrame)
+    let mode = op.distMode
+    var myX = (x * op.getMult() * 2 * PI) + ((op.phase.float64) * 2 * PI + (op.getPhase(infos) * PI * 2))
+    myX = myX % (2 * PI)
+    if(mode < 2):
+        if(a == 0): return 0
+        let ratio = 1.0 / a
+        let myMod = (myX * ratio) % (2 * PI)
+        if((myX >= 2 * PI * a) and mode != 1): return 0
+        let r = waveFuncs[op.waveform](op, myMod, infos)
+        return pow(abs(r), e).copySign(r)
+    else:
+        if(myX < 2 * PI * a):
+            let r = waveFuncs[op.waveform](op, linearInterpolation(0, 0, a, 0.5, myX / (2 * PI)) * 2 * PI, infos)
+            return pow(abs(r), e).copySign(r)
+        let r = waveFuncs[op.waveform](op, linearInterpolation(a, 0.5, 1.0, 1.0, myX / (2 * PI)) * 2 * PI, infos)
+        return pow(abs(r), e).copySign(r)
 
 # let waveforms = [
 #     "Sine".cstring,

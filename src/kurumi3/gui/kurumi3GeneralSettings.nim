@@ -17,12 +17,12 @@ when defined(emscripten):
         let t = text.cstring
         discard EM_ASM_INT("""alert(UTF8ToString($0));""", t)
 
-let normalizeOptions = ["None".cstring, "Normalize", "New Normalize"]
+let normalizeOptions = ["Hardclip".cstring, "Softclip", "Sinefold", "LinFold", "Wrap", "Normalize", "New Normalize"]
 
 proc drawGeneralSettings*(): void {.inline.} =
     # kurumi3synthContext.synthesize()
     igBegin("General settings")
-    if(igSliderInt("Normalize mode", kurumi3SynthContext.normalize.addr, 0, normalizeOptions.len - 1, normalizeOptions[kurumi3SynthContext.normalize], ImGuiSliderFlags.AlwaysClamp)):
+    if(igSliderInt("Clip mode", kurumi3SynthContext.normalize.addr, 0, normalizeOptions.len - 1, normalizeOptions[kurumi3SynthContext.normalize], ImGuiSliderFlags.AlwaysClamp)):
         kurumi3SynthContext.synthesize()
     if(igIsItemDeactivated()):
         registerHistoryEvent("Edit normalize mode")
@@ -52,20 +52,20 @@ proc drawGeneralSettings*(): void {.inline.} =
     
 
     if(igButton("Copy current wave str")):
-        # when defined(emscripten): alertJs("test")
-        kurumi3SynthContext.synthesize()
-        discard
-        # igSetClipboardText(kurumi3synthContext.generateWaveStr().cstring)
-
-    # igSameLine()
+        when not defined(emscripten): 
+            igSetClipboardText(kurumi3SynthContext.generateWaveStr().cstring)
+        else:
+            setClipboardText(kurumi3SynthContext.generateWaveStr())
     if(igButton("Copy current wave str (HEX)")):
-        discard
-        # igSetClipboardText(kurumi3synthContext.generateWaveStr(true).cstring)
-
-    # igSameLine()
+        when not defined(emscripten): 
+            igSetClipboardText(kurumi3SynthContext.generateWaveStr(true).cstring)
+        else:
+            setClipboardText(kurumi3SynthContext.generateWaveStr(true))
     if(igButton("Copy sequence string")):
-        discard
-        # igSetClipboardText(kurumi3synthContext.generateSeqStr().cstring)
+        when not defined(emscripten): 
+            igSetClipboardText(kurumi3SynthContext.generateSeqStr().cstring)
+        else:
+            setClipboardText(kurumi3SynthContext.generateSeqStr())
     
     igEnd()
     return

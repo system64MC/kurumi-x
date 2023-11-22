@@ -1,7 +1,7 @@
 # import ../synthesizer/serialization
 # import ../synthesizer/globals
 import ../synth/kurumi3synth
-import ../synth/globals
+import ../../common/globals
 import ../synth/serialization
 
 type

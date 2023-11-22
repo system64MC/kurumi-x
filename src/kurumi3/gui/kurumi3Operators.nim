@@ -1,9 +1,9 @@
 import imgui
 import strformat
 import math
-import ../synth/adsr
-import ../synth/globals
-import ../synth/constants
+import ../../common/globals
+import ../../common/constants
+import ../../common/utils
 import ../synth/operator
 import ../synth/kurumi3synth
 import ../synth/serialization
@@ -33,25 +33,50 @@ proc drawPwm(opId: int) {.inline.} =
 
     (kurumi3SynthContext.operators[opId].pwmEnv.addr).drawEnvelope(1)
 
-    # igSliderFloat("Start Duty", kurumi3SynthContext.operators[opId].pwmEnv.start.addr, 0, 4)
-    # if(igIsItemDeactivated()):
-    #     discard
+    igEndChild()
 
-    # igSliderInt("Attack", kurumi3SynthContext.operators[opId].pwmEnv.attack.addr, 0, 256)
-    # if(igIsItemDeactivated()):
-    #     discard
+proc drawExp(opId: int) {.inline.} =
+    igBeginChild("Exp")
+    if(igSliderFloat("Exponent", kurumi3SynthContext.operators[opId].expEnv.peak.addr, 0, 16)):
+        kurumi3SynthContext.synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit exponent")
 
-    # igSliderInt("Decay", kurumi3SynthContext.operators[opId].pwmEnv.decay.addr, 0, 256)
-    # if(igIsItemDeactivated()):
-    #     discard
+    if(igSliderInt("Envelope Mode", kurumi3SynthContext.operators[opId].expEnv.mode.addr, 0, envModes.len - 1, envModes[kurumi3SynthContext.operators[opId].expEnv.mode], ImGuiSliderFlags.AlwaysClamp)):
+        kurumi3SynthContext.synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Exp. Env. Mode")
 
-    # igSliderFloat("Final Duty", kurumi3SynthContext.operators[opId].pwmEnv.sustain.addr, 0, 4)
-    # if(igIsItemDeactivated()):
-    #     discard
+    if(kurumi3SynthContext.operators[opId].expEnv.mode > 0): igSeparator()
+
+    (kurumi3SynthContext.operators[opId].expEnv.addr).drawEnvelope(16)
 
     igEndChild()
 
-# TODO : Move to envelope system
+let distModes = ["Squish".cstring, "Sync", "Phase"]
+proc drawDist(opId: int) {.inline.} =
+    igBeginChild("Distortion")
+    if(igSliderInt("Dist. Mode", kurumi3SynthContext.operators[opId].distMode.addr, 0, distmodes.len - 1, distModes[kurumi3SynthContext.operators[opId].distMode], flags = ImGuiSliderFlags.AlwaysClamp)):
+        kurumi3SynthContext.synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Dist. Mode")
+        
+    if(igSliderFloat(distModes[kurumi3SynthContext.operators[opId].distMode], kurumi3SynthContext.operators[opId].distAdsr.peak.addr, 0, 1, flags = ImGuiSliderFlags.AlwaysClamp)):
+        kurumi3SynthContext.synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Dist")
+
+    if(igSliderInt("Envelope Mode", kurumi3SynthContext.operators[opId].distAdsr.mode.addr, 0, envModes.len - 1, envModes[kurumi3SynthContext.operators[opId].distAdsr.mode], ImGuiSliderFlags.AlwaysClamp)):
+        kurumi3SynthContext.synthesize()
+    if(igIsItemDeactivated()):
+        registerHistoryEvent("Edit Dist. Env. Mode")
+
+    if(kurumi3SynthContext.operators[opId].pwmEnv.mode > 0): igSeparator()
+
+    (kurumi3SynthContext.operators[opId].pwmEnv.addr).drawEnvelope(1)
+
+    igEndChild()
+
 proc drawMorphing(opId: int) {.inline.} =
     igBeginChild("morphing")
     
@@ -155,12 +180,20 @@ proc drawOperatorsControls(opId: int) {.inline.} =
             drawPhases(opId)
             igEndTabItem()
 
-        if(igBeginTabItem("Morphing")):
+        if(igBeginTabItem("Morph")):
             drawMorphing(opId)
             igEndTabItem()
 
         if(igBeginTabItem("PWM")):
             drawPwm(opId)
+            igEndTabItem()
+
+        if(igBeginTabItem("Dist")):
+            drawDist(opId)
+            igEndTabItem()
+
+        if(igBeginTabItem("Exp")):
+            drawExp(opId)
             igEndTabItem()
 
         igEndTabBar()
@@ -252,7 +285,8 @@ proc drawWaveformSettings(opId: int) {.inline.} =
     for i in 0..<256:
         let x1 = i.float64 * ratio
         let x2 = (i + 1).float64 * ratio
-        var sample = waveFuncs[op.waveform](op, i.float64 / 256.0, kurumi3SynthContext.synthInfos) * -(space.y / 2) + 0
+        # var sample = waveFuncs[op.waveform](op, i.float64 / 256.0, kurumi3SynthContext.synthInfos) * -(space.y / 2) + 0
+        var sample = op.oscillate(i.float64 / 256.0, kurumi3SynthContext.synthInfos) * -(space.y / 2) + 0
         if(op.reverseWaveform): sample *= -1.0
         dl.addRectFilled(
             position + ImVec2(x: x1 + 4, y: (space.y / 2) + 2),    

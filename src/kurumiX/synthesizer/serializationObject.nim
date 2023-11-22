@@ -47,7 +47,8 @@ type
         BOX,
         AVG_FILTER,
         WAVE_SHAPER,
-        EXP_PLUS
+        EXP_PLUS,
+        WIDTH
 
     ModuleSerializationObject* = object
         mType*: ModuleType

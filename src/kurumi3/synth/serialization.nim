@@ -1,8 +1,9 @@
 import supersnappy
 import flatty
 import kurumi3Synth
-import adsr, operator
+import operator
 import ../../common/synthInfos
+import ../../common/utils
 
 proc saveStateHistory*(synth: Kurumi3Synth): string =
     let str = "KRUL" & compress(toFlatty(synth))

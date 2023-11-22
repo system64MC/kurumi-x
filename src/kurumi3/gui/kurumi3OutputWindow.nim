@@ -44,24 +44,7 @@ proc drawOutputWindow*(): void {.inline.} =
     if(igIsItemDeactivated()):
         registerHistoryEvent("Change wave height")
 
-    if(igButton("Copy current wave str")):
-        when not defined(emscripten): 
-            igSetClipboardText(kurumi3SynthContext.generateWaveStr().cstring)
-        else:
-            setClipboardText(kurumi3SynthContext.generateWaveStr())
-    igSameLine()
-    if(igButton("Copy current wave str (HEX)")):
-        when not defined(emscripten): 
-            igSetClipboardText(kurumi3SynthContext.generateWaveStr(true).cstring)
-        else:
-            setClipboardText(kurumi3SynthContext.generateWaveStr(true))
-
-    igSameLine()
-    if(igButton("Copy sequence string")):
-        when not defined(emscripten): 
-            igSetClipboardText(kurumi3SynthContext.generateSeqStr().cstring)
-        else:
-            setClipboardText(kurumi3SynthContext.generateSeqStr())
+    
     
     igEnd()
     return

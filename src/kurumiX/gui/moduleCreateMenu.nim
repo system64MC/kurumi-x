@@ -334,6 +334,12 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         synthContext.synthesize()
         registerHistoryEvent("Created Sync Module")
 
+    if(igMenuItem("Width")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructWidthModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created Width Module")
+
     if(igMenuItem("Morpher")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructMorphModule()

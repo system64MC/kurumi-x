@@ -31,6 +31,7 @@ requires "unrolled"
 requires "https://github.com/heysokam/confy"
 requires "jsbind"
 requires "stew"
+requires "sdl2"
 
 # Build task
 task confy, ".....": run.confy()

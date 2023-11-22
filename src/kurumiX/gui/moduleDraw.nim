@@ -1204,6 +1204,33 @@ method draw(module: SyncModule, index: int, moduleList: var array[256, SynthModu
     igSetColumnOffset(2, vec.x - 20)
     igEndTabBar()
 
+method draw(module: WidthModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Width", index, COLOR_OSCILLATOR.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()    
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index, moduleList)
+        if(igSliderFloat("Width.", module.envelope.peak.addr, 0.0f, 1.0f, flags = ImGuiSliderFlags.AlwaysClamp)):
+            synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Width")
+        if(igSliderInt("Envelope Mode", module.envelope.mode.addr, 0, envModes.len - 1, envModes[module.envelope.mode], ImGuiSliderFlags.AlwaysClamp)):
+            synthContext.synthesize()
+        if(igIsItemDeactivated()): registerHistoryEvent("Width Edit Env. Mode" & $envModes[module.envelope.mode])
+        igEndTabItem()
+    if(module.envelope.mode > 0):
+        if(igBeginTabItem("Envelope")):
+            module.envelope.addr.drawEnvelope(16)
+            igEndTabItem()
+    igSetColumnOffset(2, vec.x - 20)
+    igEndTabBar()
+
     
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()

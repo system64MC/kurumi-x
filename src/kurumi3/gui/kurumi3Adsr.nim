@@ -1,5 +1,5 @@
-import ../synth/globals
-import ../synth/adsr
+import ../../common/globals
+import ../../common/utils
 import ../synth/kurumi3Synth
 import ../synth/serialization
 import kurumi3History
@@ -30,23 +30,37 @@ proc drawEnvelope*(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         # Attack and peak1
         dl.addLine(
             ImVec2(x: position.x + 4 , y: position.y + 64.0f-adsrPtr.start*(64f / maxPeak) + 2),
-            ImVec2(x: position.x + 4 + (adsrPtr.attack.float32 / 2) * ratio, y: position.y + 64.0f-adsrPtr.peak*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + (adsrPtr.attack.float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.peak*(64f / maxPeak) + 2),
             0xFF_FF_FF_FF.uint32
         )
 
         # Decay and sustain
         dl.addLine(
-            ImVec2(x: position.x + 4 + (adsrPtr.attack.float32 / 2) * ratio, y: position.y + 64.0f-adsrPtr.peak*(64f / maxPeak) + 2),
-            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay).float32 / 2) * ratio, y: position.y + 64.0f-adsrPtr.sustain*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + (adsrPtr.attack.float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.peak*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.sustain*(64f / maxPeak) + 2),
             0xFF_FF_FF_FF.uint32
         )
 
+        # Attack2 and peak2
         dl.addLine(
-            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay).float32 / 2) * ratio, y: position.y + 64.0f-adsrPtr.sustain*(64f / maxPeak) + 2),
-            ImVec2(x: position.x + 4 + ((256).float32) * ratio, y: position.y + 64.0f-adsrPtr.sustain*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.sustain*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.peak2*(64f / maxPeak) + 2),
             0xFF_FF_FF_FF.uint32
         )
 
+        # Decay2 and Sustain2
+        dl.addLine(
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.peak2*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2 + adsrPtr.decay2).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.sustain2*(64f / maxPeak) + 2),
+            0xFF_FF_FF_FF.uint32
+        )
+
+        # Sustain2
+        dl.addLine(
+            ImVec2(x: position.x + 4 + ((adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2 + adsrPtr.decay2).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.sustain2*(64f / maxPeak) + 2),
+            ImVec2(x: position.x + 4 + ((256).float32 / 1) * ratio, y: position.y + 64.0f-adsrPtr.sustain2*(64f / maxPeak) + 2),
+            0xFF_FF_FF_FF.uint32
+        )
         
         igEndChild()
 
@@ -75,7 +89,27 @@ proc drawEnvelope*(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Sustain")
 
-        igText(("Keyframes : " & $(adsrPtr.attack + adsrPtr.decay)).cstring)
+        if(igSliderInt("Attack 2", adsrPtr.attack2.addr, 0, 256)):
+            kurumi3synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit ADSR Attack 2")
+
+        if(igSliderFloat("Peak 2", adsrPtr.peak2.addr, 0, maxPeak)):
+            kurumi3synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit ADSR Peak 2")
+
+        if(igSliderInt("Decay 2", adsrPtr.decay2.addr, 0, 256)):
+            kurumi3synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit ADSR Decay 2")
+
+        if(igSliderFloat("Sus 2", adsrPtr.sustain2.addr, 0, maxPeak)):
+            kurumi3synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit ADSR Sustain 2")
+
+        igText(("Keyframes : " & $(adsrPtr.attack + adsrPtr.decay + adsrPtr.attack2 + adsrPtr.decay2)).cstring)
     of 2:
         igBeginChild("Macro", ImVec2(x: space.x, y: 64 + 4), true, flags = ImGuiWindowFlags.AlwaysAutoResize)
         var position = ImVec2()

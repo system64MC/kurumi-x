@@ -4,6 +4,7 @@ import imgui, imgui/[impl_opengl, impl_glfw]#, nimgl/imnodes
 import opengl
 import nglfw
 import ../common/globals
+import ../common/soundPreview
 import ../kurumiX/synthesizer/modules/outputModule
 import ../kurumiX/synthesizer/synthesizeWave
 import ../kurumiX/synthesizer/serialization
@@ -103,6 +104,21 @@ proc glfwCreateWindow*(width: int32, height: int32, title: cstring = "NimGL", mo
 #   if not icon: return result
 #   var image = nglfw.GlfwImage(pixels: cast[ptr cuchar](nimglLogo[0].addr), width: nimglLogoWidth, height: nimglLogoHeight)
 #   result.setWindowIcon(1, image.addr)
+when defined(emscripten):
+    proc getMaxWidth(): int32 {.EMSCRIPTEN_KEEPALIVE.} = 
+        return EM_ASM_INT("""
+        return window.innerWidth;
+    """)
+
+    proc getMaxHeight(): int32 {.EMSCRIPTEN_KEEPALIVE.} = 
+        return EM_ASM_INT("""
+        return window.innerHeight;
+    """)
+
+    proc mySetWindowSize(width, height: int32) {.EMSCRIPTEN_KEEPALIVE, cdecl.} =
+        if(window == nil): return
+        window.setWindowSize(width, height)
+
 proc boot*(): void =
     # when defined(emscripten):
         # discard EM_ASM_INT("""
@@ -127,12 +143,15 @@ proc boot*(): void =
     nglfw.windowHint(nglfw.OPENGL_PROFILE, nglfw.OPENGL_CORE_PROFILE)
     nglfw.windowHint(nglfw.RESIZABLE, nglfw.TRUE)
     let vamp = "Kurumi-X ~ Modular Wavetable Workstation\t [" & vampires[rand(vampires.len - 1)] & "]"
-    window = glfwCreateWindow(1280, 800, (vamp).cstring)
     when defined(emscripten):
+        # window = glfwCreateWindow(getMaxWidth(), 800, (vamp).cstring)
+        window = glfwCreateWindow(getMaxWidth(), getMaxHeight(), (vamp).cstring)
         discard EM_ASM_INT("""
     document.title = UTF8ToString($0)
     """, vamp.cstring)
         discard
+    else:
+        window = glfwCreateWindow(1280, 800, (vamp).cstring)
     if window == nil:
         quit(-1)
 
@@ -156,6 +175,7 @@ proc boot*(): void =
     # context.
 
     loadAlgsText()
+    initAudio()
     when(not defined(emscripten)):
         while not window.windowShouldClose:
             processLoop()

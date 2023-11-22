@@ -1,8 +1,8 @@
 import imgui
-import ../synth/globals
+import ../../common/globals
+import ../../common/constants
 import ../synth/serialization
 import ../synth/kurumi3Synth
-import ../synth/constants
 import kurumi3History
 
 proc applyAlg(alg: int) =

@@ -19,7 +19,7 @@ proc update(moduleList: array[256, SynthModule]): void =
             echo "Updating Box"
             update((m.BoxModule).moduleList)
 
-method synthesize*(synth: Synth) =
+method synthesize*(synth: Synth) {.gcsafe.} =
 
     # for m in synth.moduleList:
     #     if(m == nil): continue
