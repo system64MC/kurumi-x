@@ -2,7 +2,7 @@ import sdl2
 import sdl2/audio
 import globals
 import ../kurumiX/synthesizer/synth
-import ../kurumi3/synth/kurumi3synth
+import ../kurumi3/synth/kurumi3Synth
 import math
 import piano
 import genericSynth
@@ -46,12 +46,12 @@ proc wavetable*(userData: pointer, stream: ptr uint8, length: int32) {.cdecl.} =
             if(synth.synthInfos.macroFrame > synth.synthInfos.macroLen):
                 synth.synthInfos.macroFrame = synth.synthInfos.macroLen - 1
                 pianState.isPressed = false
-            synth.synthesize()
+            # synth.synthesize(false)
         else:
             synth.synthInfos.macroFrame.inc
             if(synth.synthInfos.macroFrame > synth.synthInfos.macroLen):
                 synth.synthInfos.macroFrame = 0
-            synth.synthesize()
+            # synth.synthesize(false)
 
 proc initAudio*() =
     sdl2.init(0)
@@ -66,3 +66,8 @@ proc initAudio*() =
 
     discard openAudio(specs.addr, nil)
     pauseAudio(0)
+
+proc closeAudio*() =
+    pauseAudio(1)
+    audioQuit()
+    sdl2.quit()

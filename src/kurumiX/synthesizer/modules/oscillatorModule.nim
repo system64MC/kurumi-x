@@ -55,8 +55,6 @@ method synthesize(module: SineOscillatorModule, x: float64, pin: int, moduleList
     let myMult = module.getMult()
     return sin((x * myMult) + (module.phase * 2 * PI + module.getPhase(synthInfos.macroFrame, synthInfos.macroLen) * PI * 2))
 
-
-
 proc constructSquareOscillatorModule*(): SquareOscillatorModule =
     var module = new SquareOscillatorModule
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]

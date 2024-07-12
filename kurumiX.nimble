@@ -1,5 +1,5 @@
-from confy/nimble as run import nil
-from confy/cfg  as cfg import nil
+# from confy/nimble as run import nil
+# from confy/cfg  as cfg import nil
 
 # Package
 
@@ -25,13 +25,13 @@ requires "print"
 requires "supersnappy"
 requires "tinydialogs"
 requires "kissfft"
-requires "mathexpr"
+requires "https://github.com/nimbackup/nim-mathexpr"
 requires "malebolgia"
 requires "unrolled"
-requires "https://github.com/heysokam/confy"
+# requires "https://github.com/heysokam/confy"
 requires "jsbind"
 requires "stew"
 requires "sdl2"
 
 # Build task
-task confy, ".....": run.confy()
+# task confy, ".....": run.confy()

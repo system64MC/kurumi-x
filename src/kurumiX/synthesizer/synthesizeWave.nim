@@ -10,6 +10,7 @@ import strutils
 import resampling
 import synth
 import ../../common/genericSynth
+import ../../common/synthInfos
 
 proc update(moduleList: array[256, SynthModule]): void =
     for m in moduleList:
@@ -19,12 +20,21 @@ proc update(moduleList: array[256, SynthModule]): void =
             echo "Updating Box"
             update((m.BoxModule).moduleList)
 
-method synthesize*(synth: Synth) {.gcsafe.} =
+proc redrawWaves(moduleList: array[256, SynthModule], infos: SynthInfos): void =
+    for m in moduleList:
+        if(m == nil): continue
+        # {.cast(gcsafe).}:
+        for i in 0..<128:
+            let sample = -m.synthesize(i.float64 * PI * 2 / 128.0, 0, moduleList, infos)
+            m.waveDisplay[i] = sample
+
+method synthesize*(synth: Synth, redraw: bool = true) {.gcsafe.} =
 
     # for m in synth.moduleList:
     #     if(m == nil): continue
     #     m.update = true
 
+    # update(synth.moduleList)
     update(synth.moduleList)
     # print(synth)
 
@@ -48,23 +58,25 @@ method synthesize*(synth: Synth) {.gcsafe.} =
 
         synth.outputInt[i] = round(value * (synth.synthInfos.waveDims.y.float64 / 2.0)).int32
 
-proc synthesize2*(synth: var Synth): void =
-    update(synth.moduleList)
-    # print(synth)
+    if(redraw): redrawWaves(synth.moduleList, synth.synthInfos)
 
-    let outModule = synth.moduleList[synth.outputIndex].OutputModule
-    # echo outModule.inputs[0].pinIndex
-
-    let overSampleValue = 1.0/synth.synthInfos.oversample.float64
-
-    for i in 0..<(4096 * 8):
-        var sum = 0.0
-        sum += outModule.synthesize((i.float64) * PI * 2 / (4096 * 8), outModule.inputs[0].pinIndex, synth.moduleList, synth.synthInfos)
-        synth.outputFloat[i] = sum
-
-    # fourierTransform(outputFloat.addr, synth.waveDims.x)
-
-    resample()
+# proc synthesize2*(synth: var Synth): void =
+#     update(synth.moduleList)
+#     # print(synth)
+# 
+#     let outModule = synth.moduleList[synth.outputIndex].OutputModule
+#     # echo outModule.inputs[0].pinIndex
+# 
+#     let overSampleValue = 1.0/synth.synthInfos.oversample.float64
+# 
+#     for i in 0..<(4096 * 8):
+#         var sum = 0.0
+#         sum += outModule.synthesize((i.float64) * PI * 2 / (4096 * 8), outModule.inputs[0].pinIndex, synth.moduleList, synth.synthInfos)
+#         synth.outputFloat[i] = sum
+# 
+#     # fourierTransform(outputFloat.addr, synth.waveDims.x)
+# 
+#     resample()
 
 proc generateWaveStr*(synth: Synth, hex: bool = false): string =
     var str = ""

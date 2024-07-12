@@ -48,7 +48,12 @@ type
         AVG_FILTER,
         WAVE_SHAPER,
         EXP_PLUS,
-        WIDTH
+        WIDTH,
+        AMP_MASK,
+        PHASE_MASK,
+        OR,
+        XOR,
+        AND,
 
     ModuleSerializationObject* = object
         mType*: ModuleType

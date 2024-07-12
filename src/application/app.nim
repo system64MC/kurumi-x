@@ -168,7 +168,6 @@ proc boot*(): void =
     doAssert igGlfwInitForOpenGL(window, true)
     doAssert igOpenGL3Init()
 
-    echo "hi"
     when not defined(emscripten): loadState()
     history.history = History(historyPointer: 0, historyStack: @[HistoryEvent(eventName: "start", synthState: synthContext.saveStateHistory())])
     k3history = History3(historyPointer: 0, historyStack: @[History3Event(eventName: "start", synthState: kurumi3SynthContext.saveStateHistory())])
@@ -188,6 +187,9 @@ proc boot*(): void =
 
         window.destroyWindow()
         nglfw.terminate()
+        closeAudio()
+        var myCtx = synthContext
+        synthContext = nil
         return
     else:
         emscripten_set_main_loop(emMainLoop, 0, 1)

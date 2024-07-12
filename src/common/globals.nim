@@ -1,5 +1,5 @@
 import ../kurumiX/synthesizer/synth
-import ../kurumi3/synth/kurumi3synth
+import ../kurumi3/synth/kurumi3Synth
 # import modules/outputModule
 import utils
 import math

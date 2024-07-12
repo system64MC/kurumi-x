@@ -16,7 +16,7 @@ proc constructExpPlusModule*(): ExpPlusModule =
     module.outputs = @[Link(moduleIndex: -1, pinIndex: -1)]
     return module
 
-method synthesize(module: ExpPlusModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
+method synthesize*(module: ExpPlusModule, x: float64, pin: int, moduleList: array[256, SynthModule], synthInfos: SynthInfos): float64 =
     let moduleA = if(module.inputs[0].moduleIndex > -1): moduleList[module.inputs[0].moduleIndex] else: return 0
     let moduleB = if(module.inputs[1].moduleIndex > -1): moduleList[module.inputs[1].moduleIndex] else: nil
 

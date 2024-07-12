@@ -44,6 +44,9 @@ import modules/[
     waveShaperModule,
     expPlusModule,
     widthModule,
+    ampMaskModule,
+    phaseMaskModule,
+    binaryModule,
 ]
 
 
@@ -92,3 +95,6 @@ export avgFilterModule
 export waveShaperModule
 export expPlusModule
 export widthModule
+export ampMaskModule
+export phaseMaskModule
+export binaryModule

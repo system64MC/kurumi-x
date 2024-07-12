@@ -1,6 +1,6 @@
 import json
 import ../../common/globals
-import kurumi3synth
+import kurumi3Synth
 import operator
 import ../../common/utils
 import stew/base64

@@ -200,6 +200,7 @@ proc computeEval*(module: WaveShaperModule, x: float64, moduleList: array[256, S
     e.addVariables(module, x, synthInfos)
 
     proc synth(args: seq[float]): float =
+        if(args.len < 2): return 0
         if(args[0].int > 1 or args[0].int < 0): return 0
         if(module.inputs[args[0].int].moduleIndex < 0): return 0
         let moduleE = moduleList[module.inputs[args[0].int].moduleIndex]
@@ -227,13 +228,15 @@ method synthesize(module: WaveShaperModule, x: float64, pin: int, moduleList: ar
 
     e.addVariables(module, x1, synthInfos)
 
-    proc synth(args: seq[float]): float =
+    let mySynth = proc(args: seq[float]): float =
+        if(args.len < 2): return 0
         if(args[0].int > 1 or args[0].int < 0): return 0
         if(module.inputs[args[0].int].moduleIndex < 0): return 0
         let moduleE = moduleList[module.inputs[args[0].int].moduleIndex]
         if(moduleE == nil): return 0 else: return moduleE.synthesize(moduloFix(args[1], 2 * PI), module.inputs[args[0].int].pinIndex, moduleList, synthInfos)
     
-    e.addFunc("synth", synth, 2)
+    if(mySynth == nil): return 0
+    e.addFunc("synth", mySynth, 2)
     # proc synth(args: seq[float]): float =
     #     if(args[0].int > 3 or args[0].int < 0): return 0
     #     if(module.inputs[args[0].int].moduleIndex < 0): return 0

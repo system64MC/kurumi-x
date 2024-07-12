@@ -308,6 +308,18 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         synthContext.synthesize()
         registerHistoryEvent("Created Amplifier Module")
 
+    if(igMenuItem("Amp. Mask")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructAmpMaskModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created Amp Mask Module")
+
+    if(igMenuItem("Phase Mask")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructPhaseMaskModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created Phase Mask Module")
+
     if(igMenuItem("Rectifier")):
         oldModule.breakAllLinks(moduleList)
         moduleList[cellIndex] = constructRectifierModule()
@@ -446,6 +458,24 @@ proc drawContextMenu(cellIndex: int, moduleList: var array[256, SynthModule], ou
         moduleList[cellIndex] = constructWaveshaperModule()
         synthContext.synthesize()
         registerHistoryEvent("Created Waveshaper Module")
+
+    if(igMenuItem("OR")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructOrModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created OR Module")
+
+    if(igMenuItem("XOR")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructXorModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created XOR Module")
+
+    if(igMenuItem("AND")):
+        oldModule.breakAllLinks(moduleList)
+        moduleList[cellIndex] = constructAndModule()
+        synthContext.synthesize()
+        registerHistoryEvent("Created AND Module")
     
     # CAUTION : This if statement is a temporary solution while I try to fix the "Abnormal Termination" crash.
     if(boxModule == nil):

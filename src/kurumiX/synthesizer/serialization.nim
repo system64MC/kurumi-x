@@ -100,6 +100,8 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             module = mData.data.fromFlatty(DualWaveModule)
         of EXPONENT:
             module = mData.data.fromFlatty(ExpModule)
+        of EXP_PLUS:
+            module = mData.data.fromFlatty(ExpPlusModule)
         of FEEDBACK:
             module = mData.data.fromFlatty(FeedbackModule)
         of FM:
@@ -179,6 +181,16 @@ proc unserializeModule(mData: ModuleSerializationObject): SynthModule =
             module = mData.data.fromFlatty(AvgFilterModule)
         of WAVE_SHAPER:
             module = mData.data.fromFlatty(WaveShaperModule)
+        of AMP_MASK:
+            module = mData.data.fromFlatty(AmpMaskModule)
+        of PHASE_MASK:
+            module = mData.data.fromFlatty(PhaseMaskModule)
+        of OR:
+            module = mData.data.fromFlatty(OrModule)
+        of XOR:
+            module = mData.data.fromFlatty(XorModule)
+        of AND:
+            module = mData.data.fromFlatty(AndModule)
         else:
             module = nil
     return module       

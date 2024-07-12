@@ -5,7 +5,7 @@ import ../../../common/synthInfos
 import math
 
 type
-    BqFilter = ref object
+    BqFilter = object
         a0, a1, a2, b1, b2: float64 = 0.0 #factors
         cutoff, q, peakGain: float64 = 0.0
         z1, z2: float64 = 0.0 #poles
@@ -36,7 +36,7 @@ proc notetofreq(n: float64): float64 =
 const LENGTH = 4096.0
 
 proc setBqFilter(filterModule: BqFilterModule, cutoff: float64, q: float): void =
-    filterModule.filter = new BqFilter
+    filterModule.filter = BqFilter()
     let sampleRate = notetofreq(filterModule.note.float64) * LENGTH
     var norm = 0.0
     var K = tan(PI * cutoff / sampleRate)

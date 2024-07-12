@@ -6,5 +6,5 @@ type
         outputInt*: array[4096, int32]
         synthInfos*: SynthInfos = SynthInfos()
 
-method synthesize*(synth: GenericSynth) {.base, gcsafe.} =
+method synthesize*(synth: GenericSynth, redraw: bool = true) {.base, gcsafe.} =
     return

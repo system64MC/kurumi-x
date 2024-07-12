@@ -5,7 +5,7 @@ import ../../../common/synthInfos
 import math
 
 type
-    ChebyshevFilter = ref object
+    ChebyshevFilter = object
         order: int32 = 4
         A: array[32, float64]
         w0: array[32, float64]
@@ -40,7 +40,7 @@ proc notetofreq(n: float64): float64 =
 # const (synthInfos.waveDims.x * synthInfos.oversample).float64 = 4096.0
 
 proc setChebyshevFilter(filterModule: FastChebyshevFilterModule, cutoff: float64, q: float, synthInfos: SynthInfos): void =
-    filterModule.filter = new ChebyshevFilter
+    filterModule.filter = ChebyshevFilter()
     let sampleRate = notetofreq(filterModule.note.float64) * (synthInfos.waveDims.x * synthInfos.oversample).float64
     # var norm = 0.0
     var K = tan(PI * cutoff / sampleRate)

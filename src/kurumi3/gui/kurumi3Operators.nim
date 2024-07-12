@@ -5,7 +5,7 @@ import ../../common/globals
 import ../../common/constants
 import ../../common/utils
 import ../synth/operator
-import ../synth/kurumi3synth
+import ../synth/kurumi3Synth
 import ../synth/serialization
 import kurumi3Adsr
 import kurumi3History
@@ -71,11 +71,59 @@ proc drawDist(opId: int) {.inline.} =
     if(igIsItemDeactivated()):
         registerHistoryEvent("Edit Dist. Env. Mode")
 
-    if(kurumi3SynthContext.operators[opId].pwmEnv.mode > 0): igSeparator()
+    if(kurumi3SynthContext.operators[opId].distAdsr.mode > 0): igSeparator()
 
-    (kurumi3SynthContext.operators[opId].pwmEnv.addr).drawEnvelope(1)
+    (kurumi3SynthContext.operators[opId].distAdsr.addr).drawEnvelope(1)
 
     igEndChild()
+
+let waveforms = [
+    "Sine".cstring,
+    "Rect. Sine",
+    "Abs. Sine",
+    "Quarter Sine",
+    "Squished Sine",
+    "Squished Rect. Sine",
+    "Squished Abs. Sine",
+    "Pulse",
+    "Rectified Pulse",
+    "Saw",
+    "Rect. Saw",
+    "Abs. Saw",
+    "Cubed Saw",
+    "Rect. Cubed Saw",
+    "Abs. Cubed Saw",
+    "Cubed Sine",
+    "Rect. Cubed Sine",
+    "Abs. Cubed Sine",
+    "Quarter Cubed Sine",
+    "Squished Cubed Sine",
+    "Squi. Rect. Cubed Sine",
+    "Squi. Abs. Cubed Sine",
+    "Triangle",
+    "Rect. Triange",
+    "Abs. Triangle",
+    "Quarter Triangle",
+    "Squished Triangle",
+    "Rect. Squished Triangle",
+    "Abs. Squished Triangle",
+    "Cubed Triangle",
+    "Rect. Cubed Triangle",
+    "Abs. Cubed Triangle",
+    "Quarter Cubed Triangle",
+    "Squi. Cubed Triangle",
+    "Squi. Rect. Cubed Triangle",
+    "Squi. Abs. Cubed Triangle",
+    "Noise (1 bit, LFSR)",
+    "Noise (8 bits, LFSR)",
+    "Noise (Random)",
+    "Custom",
+    "Rect. Custom",
+    "Abs. Custom",
+    "Cubed Custom",
+    "Rect. Cubed Custom",
+    "Abs. Cubed Custom"
+]
 
 proc drawMorphing(opId: int) {.inline.} =
     igBeginChild("morphing")
@@ -93,6 +141,33 @@ proc drawMorphing(opId: int) {.inline.} =
         kurumi3SynthContext.synthesize()
     if(igIsItemDeactivated()):
         registerHistoryEvent("Edit morph")
+
+    if(igCombo("Waveform", kurumi3SynthContext.operators[opId].morphWaveform.addr, waveforms[0].addr, waveforms.len.int32)):
+        kurumi3SynthContext.synthesize()
+        registerHistoryEvent("Change waveform")
+
+    let op = kurumi3SynthContext.operators[opId]
+    igBeginChild("wave", border = true, flags = ImGuiWindowFlags.AlwaysAutoResize)
+    var space: ImVec2
+    igGetContentRegionMaxNonUDT(space.addr)
+    # space.y = max(space.y, 64)
+    let ratio = ((space.x) / 256.0).float64
+    var position = ImVec2()
+    igGetWindowPosNonUDT(position.addr)
+    var dl = igGetWindowDrawList()
+
+    for i in 0..<256:
+        let x1 = i.float64 * ratio
+        let x2 = (i + 1).float64 * ratio
+        # var sample = waveFuncs[op.waveform](op, i.float64 / 256.0, kurumi3SynthContext.synthInfos) * -(space.y / 2) + 0
+        var sample = op.oscillate(i.float64 / 256.0, kurumi3SynthContext.synthInfos) * -(64 / 2) + 0
+        if(op.reverseWaveform): sample *= -1.0
+        dl.addRectFilled(
+            position + ImVec2(x: x1 + 4, y: (64 / 2) + 2),    
+            position + ImVec2(x: x2 + 4, y: sample + (64 / 2) + 2),
+            0xFF_4B_4B_C8.uint32    
+        )
+    igEndChild()
 
     if(igSliderInt("Envelope Mode", kurumi3SynthContext.operators[opId].morphEnvelope.mode.addr, 0, envModes.len - 1, envModes[kurumi3SynthContext.operators[opId].volAdsr.mode], ImGuiSliderFlags.AlwaysClamp)):
         kurumi3SynthContext.synthesize()
@@ -200,53 +275,7 @@ proc drawOperatorsControls(opId: int) {.inline.} =
 
 
 
-let waveforms = [
-    "Sine".cstring,
-    "Rect. Sine",
-    "Abs. Sine",
-    "Quarter Sine",
-    "Squished Sine",
-    "Squished Rect. Sine",
-    "Squished Abs. Sine",
-    "Pulse",
-    "Rectified Pulse",
-    "Saw",
-    "Rect. Saw",
-    "Abs. Saw",
-    "Cubed Saw",
-    "Rect. Cubed Saw",
-    "Abs. Cubed Saw",
-    "Cubed Sine",
-    "Rect. Cubed Sine",
-    "Abs. Cubed Sine",
-    "Quarter Cubed Sine",
-    "Squished Cubed Sine",
-    "Squi. Rect. Cubed Sine",
-    "Squi. Abs. Cubed Sine",
-    "Triangle",
-    "Rect. Triange",
-    "Abs. Triangle",
-    "Quarter Triangle",
-    "Squished Triangle",
-    "Rect. Squished Triangle",
-    "Abs. Squished Triangle",
-    "Cubed Triangle",
-    "Rect. Cubed Triangle",
-    "Abs. Cubed Triangle",
-    "Quarter Cubed Triangle",
-    "Squi. Cubed Triangle",
-    "Squi. Rect. Cubed Triangle",
-    "Squi. Abs. Cubed Triangle",
-    "Noise (1 bit, LFSR)",
-    "Noise (8 bits, LFSR)",
-    "Noise (Random)",
-    "Custom",
-    "Rect. Custom",
-    "Abs. Custom",
-    "Cubed Custom",
-    "Rect. Cubed Custom",
-    "Abs. Cubed Custom"
-]
+
 let interpolations = ["None".cstring, "Linear", "Cosine", "Cubic"]
 proc drawWaveformSettings(opId: int) {.inline.} =
     if(igCombo("Waveform", kurumi3SynthContext.operators[opId].waveform.addr, waveforms[0].addr, waveforms.len.int32)):

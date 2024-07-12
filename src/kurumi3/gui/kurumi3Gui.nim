@@ -104,10 +104,10 @@ else:
         if(path == ""): return
         try:
             let f = readFile(path)
-            loadKvpFile(f)
+            # loadKvpFile(f)
             let format = parseJson(f)["Format"].getStr("null")
             if(format notin ["vampire", "krul"]):
-                notifyPopup("File error!","Invalid format! Only KVP/KVP2 are accepted", IconType.Error)
+                discard messageBox("File error!","Invalid format! Only KVP/KVP2 are accepted", DialogType.Ok, IconType.Error, Button.Yes)
                 return
             if(format == "vampire"): 
                 loadKvpFile(f)
@@ -116,7 +116,7 @@ else:
                 loadKvp2File(f)
                 return
         except:
-            notifyPopup("File error!", "Could not load file!", IconType.Error)
+            discard messageBox("File error!", "Could not load file!", DialogType.Ok, IconType.Error, Button.Yes)
 
 import marshal
 proc saveKvp2() =

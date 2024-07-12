@@ -10,6 +10,7 @@ import moduleCreateMenu
 import history
 import std/strutils
 import math
+import sliders
 
 # proc draw(module: SynthModule): void {.inline.} =
 #     return
@@ -81,7 +82,8 @@ proc drawOscilloscope(module: SynthModule, index: int, moduleList: array[256, Sy
     for i in 0..<OSC_W.int:
         var color = COLOR_NORMAL
         let half = (OSC_H / 2)
-        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, 0, moduleList, synthContext.synthInfos)
+        # let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, 0, moduleList, synthContext.synthInfos)
+        let sample = module.waveDisplay[i]
         if(sample > 1 or sample < -1): color = COLOR_SATURATE
         let x = (sample) * half
         dl.addRectFilled(ImVec2(x: position.x + i.float64 + 4, y: position.y + half + 2), ImVec2(x: position.x + i.float64 + 1 + 4, y: position.y + half + x + 2), color)
@@ -96,7 +98,8 @@ proc drawOscilloscopeOut(module: OutputModule, index: int, moduleList: array[256
     for i in 0..<OSC_W.int:
         var color = COLOR_NORMAL
         let half = (OSC_H / 2)
-        let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, module.inputs[0].pinIndex, moduleList, synthContext.synthInfos)
+        # let sample = -module.synthesize(i.float64 * PI * 2 / OSC_W, module.inputs[0].pinIndex, moduleList, synthContext.synthInfos)
+        let sample = module.waveDisplay[i]
         if(sample > 1 or sample < -1): color = COLOR_SATURATE
         let x = (sample) * half
         dl.addRectFilled(ImVec2(x: position.x + i.float64 + 4, y: position.y + half + 2), ImVec2(x: position.x + i.float64 + 1 + 4, y: position.y + half + x + 2), color)
@@ -122,7 +125,7 @@ proc drawOscilloscopeFMPro(module: FmProModule, index: int, moduleList: array[25
 
 proc `+`(vec1, vec2: ImVec2): ImVec2 =
     return ImVec2(x: vec1.x + vec2.x, y: vec1.y + vec2.y)
-proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
+proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32, minPeak: float32 = 0.0): void {.inline.} =
     igBeginChild("envSettings")
     case adsrPtr.mode
     of 1:
@@ -167,7 +170,7 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         )
         igEndChild()
 
-        if(igSliderFloat("Start", adsrPtr.start.addr, 0, maxPeak)):
+        if(igSliderFloat("Start", adsrPtr.start.addr, minPeak, maxPeak)):
             synthContext.synthesize()
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Start")
@@ -177,7 +180,7 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Attack")
 
-        if(igSliderFloat("Peak", adsrPtr.peak.addr, 0, maxPeak)):
+        if(igSliderFloat("Peak", adsrPtr.peak.addr, minPeak, maxPeak)):
             synthContext.synthesize()
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Peak")
@@ -187,7 +190,7 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Decay")
 
-        if(igSliderFloat("Sus", adsrPtr.sustain.addr, 0, maxPeak)):
+        if(igSliderFloat("Sus", adsrPtr.sustain.addr, minPeak, maxPeak)):
             synthContext.synthesize()
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Sustain")
@@ -197,7 +200,7 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Attack 2")
 
-        if(igSliderFloat("Peak 2", adsrPtr.peak2.addr, 0, maxPeak)):
+        if(igSliderFloat("Peak 2", adsrPtr.peak2.addr, minPeak, maxPeak)):
             synthContext.synthesize()
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Peak 2")
@@ -207,7 +210,7 @@ proc drawEnvelope(adsrPtr: ptr Adsr, maxPeak: float32): void {.inline.} =
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Decay 2")
 
-        if(igSliderFloat("Sus 2", adsrPtr.sustain2.addr, 0, maxPeak)):
+        if(igSliderFloat("Sus 2", adsrPtr.sustain2.addr, minPeak, maxPeak)):
             synthContext.synthesize()
         if(igIsItemDeactivated()):
             registerHistoryEvent("Edit ADSR Sustain 2")
@@ -1078,6 +1081,7 @@ method draw(module: AbsoluterModule, index: int, moduleList: var array[256, Synt
     igEndColumns()
     return
 
+const negPos = ["Negative".cstring, "Positive"]
 method draw(module: RectifierModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
     igGetContentRegionAvailNonUDT(vec.addr)
@@ -1087,7 +1091,31 @@ method draw(module: RectifierModule, index: int, moduleList: var array[256, Synt
     drawInputs(module, index, moduleList)
     igSetColumnOffset(1, 20)
     igNextColumn()
-    module.drawOscilloscope(index, moduleList)
+    # module.drawOscilloscope(index, moduleList)
+    igBeginTabBar("tabs")
+    if(igBeginTabItem("General")):
+        module.drawOscilloscope(index, moduleList)
+        if(igSliderFloat("Rect. Level.", module.envelope.peak.addr, -1.0f, 1.0f)):
+            synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Rect. Level.")
+
+        let min: uint8 = 0
+        let max: uint8 = negPos.len - 1
+        if(sliderU8("Mode", module.negativePositive.addr, 0, 1, format = negPos[module.negativePositive])):
+            synthContext.synthesize()
+        if(igIsItemDeactivated()):
+            registerHistoryEvent("Edit Rect. Mode.")
+
+        if(igSliderInt("Envelope Mode", module.envelope.mode.addr, 0, envModes.len - 1, envModes[module.envelope.mode], ImGuiSliderFlags.AlwaysClamp)):
+            synthContext.synthesize()
+        if(igIsItemDeactivated()): registerHistoryEvent("Exp. edit Env. Mode" & $envModes[module.envelope.mode])
+        igEndTabItem()
+    if(module.envelope.mode > 0):
+        if(igBeginTabItem("Envelope")):
+            module.envelope.addr.drawEnvelope(1, -1)
+            igEndTabItem()
+    igEndTabBar()
     igSetColumnOffset(2, vec.x - 20)
     igNextColumn()
     drawOutputs(module, index, moduleList)
@@ -1201,8 +1229,11 @@ method draw(module: SyncModule, index: int, moduleList: var array[256, SynthModu
         if(igBeginTabItem("Envelope")):
             module.envelope.addr.drawEnvelope(16)
             igEndTabItem()
-    igSetColumnOffset(2, vec.x - 20)
     igEndTabBar()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
 
 method draw(module: WidthModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     var vec = ImVec2()
@@ -2206,6 +2237,109 @@ method draw(module: ExpPlusModule, index: int, moduleList: var array[256, SynthM
     drawOutputs(module, index, moduleList)
     igEndColumns()
     return
+
+method draw(module: AmpMaskModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Amp. Mask", index, COLOR_FM.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index, moduleList)
+    for i in 0..<32:
+        if(igCheckbox(("##" & $i).cstring, module.amps[i].addr)):
+            synthContext.synthesize()
+            registerHistoryEvent("Amp Mask " & $i & " " & (if(module.amps[i]): "checked" else: "unchecked"))
+        if(((i and 7) != 7)): igSameLine()
+    module.drawOscilloscope(index, moduleList)
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
+method draw(module: PhaseMaskModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Phase Mask", index, COLOR_FM.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index, moduleList)
+    for i in 0..<32:
+        if(igCheckbox(("##" & $i).cstring, module.phaseBools[i].addr)):
+            let toSwitch = 0x1 shl (31 - i)
+            module.phaseMask = module.phaseMask and (0xFF_FF_FF_FF xor toSwitch).uint32
+            module.phaseMask = module.phaseMask or (module.phaseBools[i].uint32 shl (31 - i)).uint32
+            synthContext.synthesize()
+            registerHistoryEvent("Phase Mask " & $i & " " & (if(module.phaseBools[i]): "checked" else: "unchecked"))
+        if(((i and 7) != 7)): igSameLine()
+    module.drawOscilloscope(index, moduleList)
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
+const binModes = ["Signed 32-bits".cstring, "Signed 32-bits 2", "Unsigned 32-bits", "Signed 16-bits", "Signed 16-bits 2", "Unsigned 16-bits"]
+method draw(module: OrModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Binary OR", index, COLOR_OSCILLATOR.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index, moduleList)
+    if(igSliderInt("Mode", module.mode.addr, 0, binModes.len - 1, binModes[module.mode], ImGuiSliderFlags.AlwaysClamp)):
+        synthContext.synthesize()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
+method draw(module: XorModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Binary XOR", index, COLOR_OSCILLATOR.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index, moduleList)
+    if(igSliderInt("Mode", module.mode.addr, 0, binModes.len - 1, binModes[module.mode], ImGuiSliderFlags.AlwaysClamp)):
+        synthContext.synthesize()
+    igSetColumnOffset(2, vec.x - 20)
+    igNextColumn()
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
+method draw(module: AndModule, index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
+    var vec = ImVec2()
+    igGetContentRegionAvailNonUDT(vec.addr)
+    drawTitleBar("Binary AND", index, COLOR_OSCILLATOR.uint32, moduleList)
+    igColumns(3, nil, border = false)
+    igSetColumnOffset(0, 0)
+    drawInputs(module, index, moduleList)
+    igSetColumnOffset(1, 20)
+    igNextColumn()
+    module.drawOscilloscope(index, moduleList)
+    if(igSliderInt("Mode", module.mode.addr, 0, binModes.len - 1, binModes[module.mode], ImGuiSliderFlags.AlwaysClamp)):
+        synthContext.synthesize()
+    igNextColumn()
+    igSetColumnOffset(2, vec.x - 20)
+    drawOutputs(module, index, moduleList)
+    igEndColumns()
+    return
+
 
 proc drawModule*(index: int, moduleList: var array[256, SynthModule]): void {.inline.} =
     let module = synthContext.moduleList[index]

@@ -24,6 +24,7 @@ type
         waveStr*: string = "16 25 30 31 30 29 26 25 25 28 31 28 18 11 10 13 17 20 22 20 15 6 0 2 6 5 3 1 0 0 1 4"
         waveMin*: uint8 = 0
         waveMax*: uint8 = 31
+        morphWaveform*: int32
         morphWave*: seq[uint8] = @[16, 20, 15, 11, 11, 24, 30, 31, 28, 20, 10, 2, 0, 3, 5, 0, 16, 31, 26, 28, 31, 29, 21, 11, 3, 0, 1, 7, 20, 20, 16, 11]
         morphStr*: string = "16 20 15 11 11 24 30 31 28 20 10 2 0 3 5 0 16 31 26 28 31 29 21 11 3 0 1 7 20 20 16 11"
         morphMin*: uint8 = 0
@@ -49,6 +50,7 @@ type
         reverseWaveform*: bool
         interpolation*: int32
         wavetable*: seq[uint8]
+        morphWaveform*: int32
         morphWave*: seq[uint8]
         phaseEnv*: AdsrSerialize
         expEnv*: AdsrSerialize
@@ -74,6 +76,7 @@ proc serializeOperator*(op: Operator): OperatorSerialize =
         reverseWaveform: op.reverseWaveform,
         interpolation: op.interpolation,
         wavetable: op.wavetable,
+        morphWaveform: op.morphWaveform,
         morphWave: op.morphWave,
         phaseEnv: op.phaseEnv.serializeAdsr(),
         expEnv: op.expEnv.serializeAdsr()

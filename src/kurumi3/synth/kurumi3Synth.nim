@@ -369,7 +369,7 @@ proc synthesizeOld(synth: Kurumi3Synth) =
     else:
         for i in 0..<(synth.synthInfos.waveDims.x * synth.synthInfos.oversample):
             synth.outputFloat[i] = clamp(synth.outputFloat[i], -1, 1)
-            
+
     for c in 0..<synth.synthInfos.waveDims.x:
         var res = 0.0
         for i in 0..<synth.synthInfos.oversample:
@@ -379,7 +379,6 @@ proc synthesizeOld(synth: Kurumi3Synth) =
 
 method synthesize*(synth: Kurumi3Synth) {.gcsafe.} =
     synth.resetFB()
-    echo synth.synthInfos.oversample
     if(synth.normalize < 6):
         synth.synthesizeOld()
     else:
